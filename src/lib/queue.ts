@@ -122,6 +122,7 @@ export interface OutgoingMessageJobData {
   recipientId: string;
   messageText: string;
   messageId: string;
+  imageUrl?: string | null;
 }
 
 export interface InstagramMessageJobData {
@@ -837,7 +838,7 @@ export async function initializeWorkers() {
       outgoingMessageWorkerInstance = new Worker(
         "outgoing-message",
         async (job: Job<OutgoingMessageJobData>) => {
-          const { pageId, recipientId, messageText, messageId } = job.data;
+          const { pageId, recipientId, messageText, messageId, imageUrl } = job.data;
 
           try {
             // Get conversation with platform information
@@ -881,18 +882,39 @@ export async function initializeWorkers() {
                 throw new Error('Instagram credentials not found - missing userId or access token');
               }
 
-              // Send message via Instagram Graph API (like in the repository example)
-              console.log(`🚀 Sending Instagram message to ${recipientId} using Instagram Graph API`);
+              // Build message payload - text or image attachment
+              let messagePayload: any = { recipient: { id: recipientId } };
+              
+              if (imageUrl) {
+                // Send image with optional caption
+                console.log(`🚀 Sending Instagram image to ${recipientId} using Instagram Graph API`);
+                messagePayload.message = {
+                  attachment: {
+                    type: 'image',
+                    payload: {
+                      url: imageUrl,
+                      is_reusable: true
+                    }
+                  }
+                };
+                
+                // Add text as caption if provided
+                if (messageText) {
+                  messagePayload.message.text = messageText;
+                }
+              } else {
+                // Send text message
+                console.log(`🚀 Sending Instagram text message to ${recipientId} using Instagram Graph API`);
+                messagePayload.message = { text: messageText };
+              }
+              
               const igResponse = await fetch(`https://graph.instagram.com/v22.0/me/messages`, {
                 method: 'POST',
                 headers: {
                   'Authorization': `Bearer ${accessToken}`,
                   'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({
-                  recipient: { id: recipientId },
-                  message: { text: messageText },
-                }),
+                body: JSON.stringify(messagePayload),
               });
 
               if (!igResponse.ok) {
@@ -950,15 +972,37 @@ export async function initializeWorkers() {
 
             const accessToken = await decrypt(page.pageAccessTokenEnc);
 
-            // Send message via Facebook API
-            console.log(`🚀 Sending Facebook message to ${recipientId} via page ${pageId}`);
+            // Build message payload - text or image attachment
+            let fbMessagePayload: any = { recipient: { id: recipientId } };
+            
+            if (imageUrl) {
+              // Send image with optional caption
+              console.log(`🚀 Sending Facebook image to ${recipientId} via page ${pageId}`);
+              fbMessagePayload.message = {
+                attachment: {
+                  type: 'image',
+                  payload: {
+                    url: imageUrl,
+                    is_reusable: true
+                  }
+                }
+              };
+              
+              // Note: Facebook doesn't support text with image attachment in same message
+              // If text is provided, we'll need to send it separately
+              if (messageText) {
+                console.log('⚠️ Facebook doesn\'t support caption with images, text will be ignored');
+              }
+            } else {
+              // Send text message
+              console.log(`🚀 Sending Facebook text message to ${recipientId} via page ${pageId}`);
+              fbMessagePayload.message = { text: messageText };
+            }
+            
             const response = await fetch(`https://graph.facebook.com/v18.0/me/messages?access_token=${accessToken}`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                recipient: { id: recipientId },
-                message: { text: messageText },
-              }),
+              body: JSON.stringify(fbMessagePayload),
             });
 
             if (!response.ok) {
