@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CORS Test - Chat Widget</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+        }
+        .test-button {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        .test-button:hover {
+            background: #1e40af;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 14px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .success {
+            background: #d1fae5;
+            border: 1px solid #10b981;
+            color: #065f46;
+        }
+        .error {
+            background: #fee2e2;
+            border: 1px solid #ef4444;
+            color: #991b1b;
+        }
+        .info {
+            background: #dbeafe;
+            border: 1px solid #3b82f6;
+            color: #1e40af;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .status-success { background: #10b981; }
+        .status-error { background: #ef4444; }
+        .status-pending { background: #f59e0b; }
+        .test-list {
+            list-style: none;
+            padding: 0;
+        }
+        .test-list li {
+            padding: 10px;
+            margin-bottom: 10px;
+            background: #f9fafb;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🧪 Chat Widget CORS Test</h1>
+        <p class="subtitle">Test if CORS errors are fixed for widget API endpoints</p>
+
+        <div>
+            <button class="test-button" onclick="testAllEndpoints()">▶️ Run All Tests</button>
+            <button class="test-button" onclick="testConfig()">Test Config</button>
+            <button class="test-button" onclick="clearResults()">Clear</button>
+        </div>
+
+        <div id="results"></div>
+
+        <div style="margin-top: 30px;">
+            <h3>Test Status:</h3>
+            <ul class="test-list" id="statusList">
+                <li>
+                    <span class="status-indicator status-pending" id="status-config"></span>
+                    <span>Config Endpoint (/api/widget/config/public)</span>
+                </li>
+                <li>
+                    <span class="status-indicator status-pending" id="status-init"></span>
+                    <span>Init Endpoint (/api/widget/init)</span>
+                </li>
+                <li>
+                    <span class="status-indicator status-pending" id="status-messages"></span>
+                    <span>Messages Endpoint (/api/widget/messages)</span>
+                </li>
+            </ul>
+        </div>
+
+        <div class="result info" style="margin-top: 20px;">
+            <strong>📋 Instructions:</strong><br>
+            1. Make sure your server is running (npm run dev)<br>
+            2. Click "Run All Tests" to test all endpoints<br>
+            3. Check for any CORS errors in browser console (F12)<br>
+            4. All tests should show ✅ green indicators
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:3001';
+        const COMPANY_ID = 'cmfl07q6p0000v1xsfmtdtxgd';
+        const resultsDiv = document.getElementById('results');
+
+        function clearResults() {
+            resultsDiv.innerHTML = '';
+            ['config', 'init', 'messages'].forEach(id => {
+                const el = document.getElementById(`status-${id}`);
+                el.className = 'status-indicator status-pending';
+            });
+        }
+
+        function addResult(message, type) {
+            const div = document.createElement('div');
+            div.className = `result ${type}`;
+            div.textContent = message;
+            resultsDiv.appendChild(div);
+        }
+
+        function updateStatus(endpoint, success) {
+            const el = document.getElementById(`status-${endpoint}`);
+            el.className = `status-indicator ${success ? 'status-success' : 'status-error'}`;
+        }
+
+        async function testConfig() {
+            try {
+                addResult('🔄 Testing GET /api/widget/config/public...', 'info');
+                
+                const response = await fetch(`${API_URL}/api/widget/config/public?companyId=${COMPANY_ID}`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                
+                if (data.config) {
+                    addResult(`✅ Config endpoint SUCCESS!\n\nReceived config:\n${JSON.stringify(data.config, null, 2)}`, 'success');
+                    updateStatus('config', true);
+                } else {
+                    throw new Error('No config in response');
+                }
+            } catch (error) {
+                addResult(`❌ Config endpoint FAILED!\n\nError: ${error.message}\n\nCheck browser console for CORS errors.`, 'error');
+                updateStatus('config', false);
+                console.error('Config test error:', error);
+            }
+        }
+
+        async function testInit() {
+            try {
+                addResult('🔄 Testing POST /api/widget/init...', 'info');
+                
+                const sessionId = `test_${Date.now()}`;
+                
+                const response = await fetch(`${API_URL}/api/widget/init`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        companyId: COMPANY_ID,
+                        name: 'Test User',
+                        email: 'test@example.com',
+                        message: 'This is a CORS test message',
+                        sessionId: sessionId
+                    })
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(`HTTP ${response.status}: ${errorData.error || response.statusText}`);
+                }
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    addResult(`✅ Init endpoint SUCCESS!\n\nConversation created: ${data.conversationId}`, 'success');
+                    updateStatus('init', true);
+                    return data.conversationId;
+                } else {
+                    throw new Error('Init failed');
+                }
+            } catch (error) {
+                addResult(`❌ Init endpoint FAILED!\n\nError: ${error.message}\n\nCheck browser console for CORS errors.`, 'error');
+                updateStatus('init', false);
+                console.error('Init test error:', error);
+                return null;
+            }
+        }
+
+        async function testMessages() {
+            try {
+                addResult('🔄 Testing POST /api/widget/messages...', 'info');
+                
+                const sessionId = `test_${Date.now()}`;
+                
+                // First init to create conversation
+                const initResponse = await fetch(`${API_URL}/api/widget/init`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        companyId: COMPANY_ID,
+                        name: 'Test User',
+                        email: 'test@example.com',
+                        message: 'Initial message',
+                        sessionId: sessionId
+                    })
+                });
+
+                if (!initResponse.ok) {
+                    throw new Error('Failed to init conversation for message test');
+                }
+
+                const initData = await initResponse.json();
+                
+                // Now test sending a message
+                const messageResponse = await fetch(`${API_URL}/api/widget/messages`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        sessionId: sessionId,
+                        companyId: COMPANY_ID,
+                        message: 'Test message from CORS test'
+                    })
+                });
+                
+                if (!messageResponse.ok) {
+                    const errorData = await messageResponse.json();
+                    throw new Error(`HTTP ${messageResponse.status}: ${errorData.error || messageResponse.statusText}`);
+                }
+
+                const data = await messageResponse.json();
+                
+                if (data.success) {
+                    addResult(`✅ Messages endpoint SUCCESS!\n\nMessage sent successfully!`, 'success');
+                    updateStatus('messages', true);
+                } else {
+                    throw new Error('Message send failed');
+                }
+            } catch (error) {
+                addResult(`❌ Messages endpoint FAILED!\n\nError: ${error.message}\n\nCheck browser console for CORS errors.`, 'error');
+                updateStatus('messages', false);
+                console.error('Messages test error:', error);
+            }
+        }
+
+        async function testAllEndpoints() {
+            clearResults();
+            addResult('🚀 Starting CORS tests...', 'info');
+            
+            await testConfig();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            await testInit();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            await testMessages();
+            
+            addResult('\n✅ All tests completed! Check results above.', 'info');
+        }
+
+        // Log CORS errors to the page
+        window.addEventListener('error', (e) => {
+            if (e.message && e.message.includes('CORS')) {
+                addResult(`🚨 CORS ERROR DETECTED!\n\n${e.message}`, 'error');
+            }
+        });
+
+        console.log('%c🧪 CORS Test Page Loaded', 'color: #2563eb; font-size: 16px; font-weight: bold');
+        console.log('%cClick "Run All Tests" button to start testing', 'color: #666; font-size: 14px');
+    </script>
+</body>
+</html>

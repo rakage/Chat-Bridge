@@ -1,0 +1,31 @@
+In file: src\app\api\conversations\[id]\route.ts
+
+Around line 95, BEFORE the return statement:
+
+    return NextResponse.json({
+      conversation: transformedConversation,
+      messages: transformedMessages,
+    });
+
+ADD THIS CODE BEFORE THE RETURN:
+
+    // Update last seen timestamp when conversation is viewed
+    try {
+      await LastSeenService.updateLastSeen(session.user.id, conversationId, new Date());
+    } catch (error) {
+      console.error("Failed to update last seen on conversation view:", error);
+    }
+
+So it becomes:
+
+    // Update last seen timestamp when conversation is viewed
+    try {
+      await LastSeenService.updateLastSeen(session.user.id, conversationId, new Date());
+    } catch (error) {
+      console.error("Failed to update last seen on conversation view:", error);
+    }
+
+    return NextResponse.json({
+      conversation: transformedConversation,
+      messages: transformedMessages,
+    });

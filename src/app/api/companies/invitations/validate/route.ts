@@ -1,0 +1,133 @@
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { z } from "zod";
+
+const validateInvitationSchema = z.object({
+  code: z.string().min(1, "Invitation code is required"),
+});
+
+export async function POST(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Validate request body
+    const body = await request.json();
+    const { code } = validateInvitationSchema.parse(body);
+
+    // Find invitation
+    const invitation = await db.companyInvitation.findUnique({
+      where: { code },
+      include: {
+        company: {
+          select: {
+            id: true,
+            name: true,
+            _count: {
+              select: {
+                users: true,
+              },
+            },
+          },
+        },
+        invitedBy: {
+          select: {
+            name: true,
+          },
+        },
+      },
+    });
+
+    if (!invitation) {
+      return NextResponse.json(
+        { error: "Invalid invitation code" },
+        { status: 404 }
+      );
+    }
+
+    // Check if invitation is active
+    if (!invitation.isActive) {
+      return NextResponse.json(
+        { error: "This invitation has been paused" },
+        { status: 400 }
+      );
+    }
+
+    // Check if invitation is expired
+    if (new Date() > invitation.expiresAt) {
+      return NextResponse.json(
+        { error: "Invitation has expired" },
+        { status: 400 }
+      );
+    }
+
+    // Check if invitation has reached max uses
+    if (invitation.usedCount >= invitation.maxUses) {
+      return NextResponse.json(
+        { error: "This invitation has reached its maximum number of uses" },
+        { status: 400 }
+      );
+    }
+
+    // Check if invitation is already used (for single-use invitations)
+    if (invitation.status === "ACCEPTED" && invitation.maxUses === 1) {
+      return NextResponse.json(
+        { error: "Invitation has already been used" },
+        { status: 400 }
+      );
+    }
+
+    // Check if email-specific invitation matches user's email
+    if (invitation.email && invitation.email !== session.user.email) {
+      return NextResponse.json(
+        { error: "This invitation is for a different email address" },
+        { status: 403 }
+      );
+    }
+
+    // Check if user already belongs to a company
+    const user = await db.user.findUnique({
+      where: { id: session.user.id },
+      select: { companyId: true },
+    });
+
+    if (user?.companyId) {
+      return NextResponse.json(
+        { error: "You already belong to a company" },
+        { status: 400 }
+      );
+    }
+
+    return NextResponse.json({
+      valid: true,
+      invitation: {
+        companyName: invitation.company.name,
+        memberCount: invitation.company._count.users,
+        invitedBy: invitation.invitedBy.name,
+        expiresAt: invitation.expiresAt,
+        maxUses: invitation.maxUses,
+        usedCount: invitation.usedCount,
+        remainingUses: invitation.maxUses - invitation.usedCount,
+      },
+    });
+  } catch (error) {
+    console.error("Failed to validate invitation:", error);
+
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: "Invalid input", details: error.errors },
+        { status: 400 }
+      );
+    }
+
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}

@@ -1,0 +1,153 @@
+;; PgBouncer Configuration File
+;; ============================================
+;; Connection pooling for PostgreSQL
+;; Use this for production environments with high traffic
+;; ============================================
+
+[databases]
+; Format: dbname = host=HOST port=PORT dbname=DBNAME
+; Replace with your actual database details
+facebook_bot_db = host=localhost port=5432 dbname=facebook_bot_db user=postgres password=yourpassword
+
+; Or use connection string
+; facebook_bot_db = postgresql://user:pass@host:5432/dbname
+
+[pgbouncer]
+;; ============================================
+;; NETWORK SETTINGS
+;; ============================================
+
+; IP address to listen on
+; 0.0.0.0 = all interfaces
+; localhost = local only
+listen_addr = 0.0.0.0
+
+; Port to listen on (default: 6432, different from PostgreSQL 5432)
+listen_port = 6432
+
+; Unix socket directory (optional)
+; unix_socket_dir = /tmp
+
+;; ============================================
+;; AUTHENTICATION
+;; ============================================
+
+; Authentication method
+; Options: md5, scram-sha-256, trust, pam
+auth_type = md5
+
+; File containing user credentials
+; Format: "username" "password"
+auth_file = /etc/pgbouncer/userlist.txt
+
+;; ============================================
+;; POOLING MODE
+;; ============================================
+
+; Pooling mode
+; - session: Connection is assigned for client session (safest)
+; - transaction: Connection is assigned per transaction (recommended)
+; - statement: Connection is assigned per statement (most efficient but may break some features)
+pool_mode = transaction
+
+;; ============================================
+;; CONNECTION LIMITS
+;; ============================================
+
+; Maximum number of client connections allowed
+max_client_conn = 1000
+
+; How many server connections to allow per database+user combination
+default_pool_size = 20
+
+; Minimum pool size (kept open even when idle)
+min_pool_size = 5
+
+; Additional connections for high load
+reserve_pool_size = 5
+
+; Timeout for reserve pool (seconds)
+reserve_pool_timeout = 3
+
+; Maximum number of waiting clients
+max_db_connections = 100
+
+; Maximum time a client is allowed to wait for connection (seconds)
+; 0 = unlimited
+server_connect_timeout = 15
+
+; How long idle servers will be kept (seconds)
+; 0 = unlimited
+server_idle_timeout = 600
+
+;; ============================================
+;; LOGGING
+;; ============================================
+
+; Log file location
+; Requires write permissions
+logfile = /var/log/pgbouncer/pgbouncer.log
+
+; Log verbosity
+; Options: 0 = off, 1 = normal, 2 = verbose
+log_connections = 1
+log_disconnections = 1
+log_pooler_errors = 1
+
+; Show stats period (seconds)
+stats_period = 60
+
+;; ============================================
+;; ADMIN ACCESS
+;; ============================================
+
+; Admin users (can run admin commands)
+admin_users = postgres
+
+; Stats users (can view stats)
+stats_users = stats_collector
+
+;; ============================================
+;; PERFORMANCE TUNING
+;; ============================================
+
+; Networking buffer sizes
+pkt_buf = 4096
+sbuf_loopcnt = 5
+
+; TCP keepalive settings
+tcp_keepalive = 1
+tcp_keepidle = 60
+tcp_keepintvl = 10
+tcp_keepcnt = 5
+
+; DNS lookup timeout
+dns_max_ttl = 15
+
+;; ============================================
+;; SECURITY
+;; ============================================
+
+; Disable dangerous functions
+disable_pqexec = 0
+
+; Ignore startup parameters
+ignore_startup_parameters = extra_float_digits
+
+;; ============================================
+;; NOTES
+;; ============================================
+;
+; After modifying this file:
+; 1. Reload PgBouncer: sudo systemctl reload pgbouncer
+; 2. Or restart: sudo systemctl restart pgbouncer
+;
+; Check status:
+; - sudo systemctl status pgbouncer
+; - psql -h localhost -p 6432 -U postgres pgbouncer
+; - SHOW POOLS;
+;
+; Monitor connections:
+; - SHOW CLIENTS;
+; - SHOW SERVERS;
+; - SHOW STATS;
