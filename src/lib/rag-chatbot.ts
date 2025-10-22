@@ -5,6 +5,7 @@ import { llmService } from "./llm/service";
 import { decrypt } from "./encryption";
 import type { ProviderConfig } from "./llm/types";
 import crypto from "crypto";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 export interface ChatMessage {
   role: "user" | "assistant";
@@ -37,6 +38,7 @@ export interface RAGChatResponse {
 export class RAGChatbot {
   private static readonly MAX_CONTEXT_LENGTH = 8000;
   private static readonly MAX_MEMORY_MESSAGES = 10; // Keep last 10 messages in memory
+  private static readonly GEMINI_MODEL = "gemini-1.5-flash";
 
   /**
    * Generate hash for message caching
@@ -170,7 +172,9 @@ export class RAGChatbot {
           });
 
           // Save updated memory
-          await this.saveConversationMemory(conversationId, memory);
+          if (conversationId) {
+            await this.saveConversationMemory(conversationId, memory);
+          }
 
           return {
             response: cached.response,

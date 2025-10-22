@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
     });
 
     console.log(
-      `✅ Invitation created for company ${user.company.name} by ${session.user.email}`
+      `✅ Invitation created for company ${invitation.company.name} by ${session.user.email}`
     );
 
     // Generate invitation link

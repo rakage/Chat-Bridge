@@ -6,7 +6,7 @@ import { withRateLimit, createRateLimitResponse } from "@/lib/rate-limit";
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -33,7 +33,7 @@ export async function POST(
       );
     }
 
-    const invitationId = params.id;
+    const { id: invitationId } = await params;
 
     // Find invitation
     const invitation = await db.companyInvitation.findUnique({

@@ -10,7 +10,7 @@ const toggleSchema = z.object({
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { connectionId: string } }
+  { params }: { params: Promise<{ connectionId: string }> }
 ) {
   try {
     // Check authentication
@@ -31,7 +31,7 @@ export async function PATCH(
       );
     }
 
-    const { connectionId } = params;
+    const { connectionId } = await params;
 
     // Find Telegram connection
     const connection = await db.telegramConnection.findUnique({
@@ -68,11 +68,11 @@ export async function PATCH(
 
     // Check if LLM config exists when enabling autoBot
     if (autoBot) {
-      const llmConfig = await db.lLMConfig.findUnique({
+      const llmConfig = await db.providerConfig.findUnique({
         where: { companyId: user.companyId },
       });
 
-      if (!llmConfig || !llmConfig.apiKey) {
+      if (!llmConfig || !llmConfig.apiKeyEnc) {
         return NextResponse.json(
           { error: "LLM Configuration Required: Please configure your LLM provider in Bot Settings before enabling auto-response." },
           { status: 400 }

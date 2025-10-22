@@ -286,10 +286,10 @@ export async function POST(req: NextRequest) {
                 text: botResponse.response,
                 role: 'BOT',
                 providerUsed: providerConfig?.provider,
-                meta: {
+                meta: JSON.parse(JSON.stringify({
                   ragContext: botResponse.context,
                   ragUsage: botResponse.usage,
-                },
+                })),
               },
             });
 

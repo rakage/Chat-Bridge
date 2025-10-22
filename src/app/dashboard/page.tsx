@@ -129,12 +129,20 @@ export default function DashboardPage() {
       // Mock chart data
       const mockConversationTrends = Array.from({ length: 30 }, (_, i) => {
         const date = new Date(Date.now() - (29 - i) * 24 * 60 * 60 * 1000);
+        const facebook = Math.floor(Math.random() * 8) + 2;
+        const instagram = Math.floor(Math.random() * 6) + 1;
+        const telegram = Math.floor(Math.random() * 4) + 1;
+        const widget = Math.floor(Math.random() * 5) + 1;
         return {
           date: date.toLocaleDateString("en-US", {
             month: "short",
             day: "numeric",
           }),
-          conversations: Math.floor(Math.random() * 20) + 5,
+          facebook,
+          instagram,
+          telegram,
+          widget,
+          total: facebook + instagram + telegram + widget,
         };
       });
 

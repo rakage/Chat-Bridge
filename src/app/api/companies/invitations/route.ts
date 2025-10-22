@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
 
     // Get all invitations for the company
     // Check if CompanyInvitation table exists
-    let invitations = [];
+    let invitations: any[] = [];
     try {
       invitations = await db.companyInvitation.findMany({
         where: { companyId: session.user.companyId },

@@ -55,11 +55,11 @@ export async function PATCH(request: NextRequest) {
 
     // Check if LLM config exists when enabling autoBot
     if (autoBot) {
-      const llmConfig = await db.lLMConfig.findUnique({
+      const llmConfig = await db.providerConfig.findUnique({
         where: { companyId: user.companyId },
       });
 
-      if (!llmConfig || !llmConfig.apiKey) {
+      if (!llmConfig || !llmConfig.apiKeyEnc) {
         return NextResponse.json(
           { error: "LLM Configuration Required: Please configure your LLM provider in Bot Settings before enabling auto-response." },
           { status: 400 }
