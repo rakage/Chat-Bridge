@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { InstagramGraphOAuth } from "@/lib/instagram-graph-oauth";
+import { db } from "@/lib/db";
+import { encrypt } from "@/lib/encryption";
 
 export async function GET(request: NextRequest) {
   try {
@@ -69,19 +71,56 @@ export async function GET(request: NextRequest) {
       console.log(`💬 Found ${conversations.length} conversations`);
       console.log(`🕐 Long-lived token expires in ${Math.round(longTokenResponse.expires_in / 86400)} days`);
       
-      const instagramData = encodeURIComponent(JSON.stringify({
-        userProfile: profile,
-        accessToken: longTokenResponse.access_token,
-        expiresIn: longTokenResponse.expires_in,
-        userId: shortTokenResponse.user_id,
-        mediaCount: profile.media_count || 0,
-        conversationsCount: conversations.length,
-        messagingEnabled: true, // Instagram Business Login supports messaging
-        recentMedia: [] // Skip media for now
-      }));
+      // Get user's company
+      const user = await db.user.findUnique({
+        where: { id: session.user.id },
+        select: { companyId: true }
+      });
+
+      if (!user?.companyId) {
+        console.error("❌ User has no company associated");
+        return NextResponse.redirect(
+          new URL("/dashboard/integrations?error=Please create or join a company first", baseUrl)
+        );
+      }
+
+      // Encrypt access token
+      const encryptedToken = await encrypt(longTokenResponse.access_token);
+
+      // Save or update Instagram connection
+      console.log("💾 Saving Instagram connection to database...");
+      const connection = await db.instagramConnection.upsert({
+        where: {
+          companyId_instagramUserId: {
+            companyId: user.companyId,
+            instagramUserId: profile.id,
+          },
+        },
+        create: {
+          instagramUserId: profile.id,
+          username: profile.username,
+          accessTokenEnc: encryptedToken,
+          companyId: user.companyId,
+          profilePictureUrl: profile.profile_picture_url || null,
+          accountType: profile.account_type || "BUSINESS",
+          mediaCount: profile.media_count || 0,
+          conversationsCount: conversations.length,
+          messagingEnabled: true,
+        },
+        update: {
+          username: profile.username,
+          accessTokenEnc: encryptedToken,
+          profilePictureUrl: profile.profile_picture_url || null,
+          accountType: profile.account_type || "BUSINESS",
+          mediaCount: profile.media_count || 0,
+          conversationsCount: conversations.length,
+        },
+      });
+
+      console.log(`✅ Instagram connection saved: @${connection.username} (ID: ${connection.id})`);
 
       return NextResponse.redirect(
-        new URL(`/dashboard/integrations?instagram_success=true&instagram_data=${instagramData}`, baseUrl)
+        new URL(`/dashboard/integrations/instagram/manage?success=true`, baseUrl)
       );
 
     } catch (apiError) {
