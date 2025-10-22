@@ -4,7 +4,7 @@ const next = require("next");
 
 const dev = true; // Always use production mode for real-time server
 const hostname = "localhost";
-const port = parseInt(process.env.PORT || "3001", 10);
+const port = parseInt(process.env.PORT || "3005", 10);
 
 const app = next({ dev, hostname, port });
 const handle = app.getRequestHandler();
@@ -29,7 +29,7 @@ app.prepare().then(async () => {
 
     const io = new SocketIOServer(server, {
       cors: {
-        origin: process.env.NEXTAUTH_URL || "http://localhost:3001",
+        origin: process.env.NEXTAUTH_URL || "http://localhost:3005",
         methods: ["GET", "POST"],
         credentials: true,
       },
@@ -64,11 +64,18 @@ app.prepare().then(async () => {
     Promise.all([pubClient.connect(), subClient.connect()])
       .then(() => {
         io.adapter(createAdapter(pubClient, subClient));
-        console.log("✅ Socket.IO Redis adapter initialized - Ready for horizontal scaling!");
+        console.log(
+          "✅ Socket.IO Redis adapter initialized - Ready for horizontal scaling!"
+        );
       })
       .catch((err) => {
-        console.error("❌ Failed to connect Redis for Socket.IO adapter:", err.message);
-        console.warn("⚠️  Socket.IO will run in single-server mode without Redis adapter");
+        console.error(
+          "❌ Failed to connect Redis for Socket.IO adapter:",
+          err.message
+        );
+        console.warn(
+          "⚠️  Socket.IO will run in single-server mode without Redis adapter"
+        );
       });
 
     // Enhanced connection handling for proper room management
@@ -101,12 +108,14 @@ app.prepare().then(async () => {
       // Handle widget customer online status
       socket.on("widget:online", (data) => {
         const { conversationId, sessionId } = data;
-        console.log(`🟢 Widget customer online: ${conversationId} (${sessionId})`);
-        
+        console.log(
+          `🟢 Widget customer online: ${conversationId} (${sessionId})`
+        );
+
         // Store widget session in memory
         socket.data.widgetSession = sessionId;
         socket.data.widgetConversationId = conversationId;
-        
+
         // Broadcast online status to conversation room
         socket.to(`conversation:${conversationId}`).emit("customer:online", {
           conversationId,
@@ -117,8 +126,10 @@ app.prepare().then(async () => {
 
       socket.on("widget:offline", (data) => {
         const { conversationId, sessionId } = data;
-        console.log(`🔴 Widget customer offline: ${conversationId} (${sessionId})`);
-        
+        console.log(
+          `🔴 Widget customer offline: ${conversationId} (${sessionId})`
+        );
+
         // Broadcast offline status to conversation room
         socket.to(`conversation:${conversationId}`).emit("customer:offline", {
           conversationId,
@@ -130,10 +141,10 @@ app.prepare().then(async () => {
       socket.on("widget:heartbeat", (data) => {
         const { conversationId, sessionId } = data;
         console.log(`💓 Widget heartbeat: ${conversationId} (${sessionId})`);
-        
+
         // Update last seen timestamp
         socket.data.lastHeartbeat = Date.now();
-        
+
         // Broadcast heartbeat to conversation room (agents can use this)
         socket.to(`conversation:${conversationId}`).emit("customer:heartbeat", {
           conversationId,
@@ -155,7 +166,9 @@ app.prepare().then(async () => {
 
         // Also broadcast to user's company room so ConversationsList gets updates even when not in specific conversation room
         if (data.companyId) {
-          socket.to(`company:${data.companyId}`).emit("conversation:view-update", data);
+          socket
+            .to(`company:${data.companyId}`)
+            .emit("conversation:view-update", data);
         }
       });
 
@@ -176,15 +189,19 @@ app.prepare().then(async () => {
 
       socket.on("disconnect", () => {
         console.log("👤 User disconnected:", socket.id);
-        
+
         // If this was a widget customer, broadcast offline status
         if (socket.data.widgetConversationId && socket.data.widgetSession) {
-          console.log(`🔴 Widget customer disconnected: ${socket.data.widgetConversationId}`);
-          socket.to(`conversation:${socket.data.widgetConversationId}`).emit("customer:offline", {
-            conversationId: socket.data.widgetConversationId,
-            sessionId: socket.data.widgetSession,
-            timestamp: new Date().toISOString(),
-          });
+          console.log(
+            `🔴 Widget customer disconnected: ${socket.data.widgetConversationId}`
+          );
+          socket
+            .to(`conversation:${socket.data.widgetConversationId}`)
+            .emit("customer:offline", {
+              conversationId: socket.data.widgetConversationId,
+              sessionId: socket.data.widgetSession,
+              timestamp: new Date().toISOString(),
+            });
         }
       });
     });
@@ -203,7 +220,7 @@ app.prepare().then(async () => {
     setTimeout(async () => {
       try {
         const response = await fetch(
-          "http://localhost:3001/api/realtime/init",
+          "http://localhost:3005/api/realtime/init",
           {
             method: "POST",
           }

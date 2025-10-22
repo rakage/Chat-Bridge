@@ -5,7 +5,7 @@ const next = require("next");
 // Force production mode
 const dev = false;
 const hostname = "localhost";
-const port = parseInt(process.env.PORT || "3001", 10);
+const port = parseInt(process.env.PORT || "3005", 10);
 
 // Set NODE_ENV to production
 process.env.NODE_ENV = "production";
@@ -33,7 +33,7 @@ app.prepare().then(async () => {
 
     const io = new SocketIOServer(server, {
       cors: {
-        origin: process.env.NEXTAUTH_URL || "http://localhost:3001",
+        origin: process.env.NEXTAUTH_URL || "http://localhost:3005",
         methods: ["GET", "POST"],
         credentials: true,
       },
@@ -48,7 +48,7 @@ app.prepare().then(async () => {
     const redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
     console.log("🔌 Connecting Socket.IO to Redis adapter for production...");
 
-    const pubClient = createClient({ 
+    const pubClient = createClient({
       url: redisUrl,
       socket: {
         reconnectStrategy: (retries) => {
@@ -57,10 +57,12 @@ app.prepare().then(async () => {
             return new Error("Redis reconnection limit exceeded");
           }
           const delay = Math.min(retries * 100, 3000);
-          console.log(`🔄 Reconnecting to Redis in ${delay}ms (attempt ${retries})`);
+          console.log(
+            `🔄 Reconnecting to Redis in ${delay}ms (attempt ${retries})`
+          );
           return delay;
-        }
-      }
+        },
+      },
     });
     const subClient = pubClient.duplicate();
 
@@ -93,13 +95,24 @@ app.prepare().then(async () => {
     Promise.all([pubClient.connect(), subClient.connect()])
       .then(() => {
         io.adapter(createAdapter(pubClient, subClient));
-        console.log("✅ Socket.IO Redis adapter initialized - Production ready for horizontal scaling!");
-        console.log("📊 Multiple server instances can now share Socket.IO connections");
+        console.log(
+          "✅ Socket.IO Redis adapter initialized - Production ready for horizontal scaling!"
+        );
+        console.log(
+          "📊 Multiple server instances can now share Socket.IO connections"
+        );
       })
       .catch((err) => {
-        console.error("❌ Failed to connect Redis for Socket.IO adapter:", err.message);
-        console.warn("⚠️  Socket.IO will run in single-server mode without Redis adapter");
-        console.warn("⚠️  Horizontal scaling will NOT work without Redis adapter");
+        console.error(
+          "❌ Failed to connect Redis for Socket.IO adapter:",
+          err.message
+        );
+        console.warn(
+          "⚠️  Socket.IO will run in single-server mode without Redis adapter"
+        );
+        console.warn(
+          "⚠️  Horizontal scaling will NOT work without Redis adapter"
+        );
       });
 
     // Enhanced connection handling with company and conversation rooms
@@ -167,7 +180,9 @@ app.prepare().then(async () => {
           .emit("conversation:view-update", data);
 
         if (data.companyId) {
-          socket.to(`company:${data.companyId}`).emit("conversation:view-update", data);
+          socket
+            .to(`company:${data.companyId}`)
+            .emit("conversation:view-update", data);
         }
       });
 
@@ -183,14 +198,16 @@ app.prepare().then(async () => {
 
       socket.on("disconnect", () => {
         console.log("👤 User disconnected:", socket.id);
-        
+
         // Widget customer offline broadcast
         if (socket.data.widgetConversationId && socket.data.widgetSession) {
-          socket.to(`conversation:${socket.data.widgetConversationId}`).emit("customer:offline", {
-            conversationId: socket.data.widgetConversationId,
-            sessionId: socket.data.widgetSession,
-            timestamp: new Date().toISOString(),
-          });
+          socket
+            .to(`conversation:${socket.data.widgetConversationId}`)
+            .emit("customer:offline", {
+              conversationId: socket.data.widgetConversationId,
+              sessionId: socket.data.widgetSession,
+              timestamp: new Date().toISOString(),
+            });
         }
       });
     });
@@ -209,7 +226,7 @@ app.prepare().then(async () => {
     setTimeout(async () => {
       try {
         const response = await fetch(
-          "http://localhost:3001/api/realtime/init",
+          "http://localhost:3005/api/realtime/init",
           {
             method: "POST",
           }
