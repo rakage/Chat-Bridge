@@ -10,6 +10,15 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { FacebookIcon } from "@/components/ui/facebook-icon";
 import { InstagramIcon } from "@/components/ui/instagram-icon";
 import { TelegramIcon } from "@/components/ui/telegram-icon";
@@ -121,6 +130,7 @@ export default function ConversationView({
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [imageValidationError, setImageValidationError] = useState<string | null>(null);
   
   // Pagination states
   const [loadingMore, setLoadingMore] = useState(false);
@@ -745,9 +755,9 @@ export default function ConversationView({
     
     if (!allowedTypes.includes(file.type)) {
       if (isInstagram && file.type === "image/webp") {
-        setError("Instagram doesn't support WebP images. Please use JPEG, PNG, or GIF format.");
+        setImageValidationError("Instagram doesn't support WebP images. Please use JPEG, PNG, or GIF format.");
       } else {
-        setError(`Invalid file type. Only ${isInstagram ? "JPEG, PNG, and GIF" : "JPEG, PNG, WebP, and GIF"} images are allowed.`);
+        setImageValidationError(`Invalid file type. Only ${isInstagram ? "JPEG, PNG, and GIF" : "JPEG, PNG, WebP, and GIF"} images are allowed.`);
       }
       e.target.value = ""; // Reset input
       return;
@@ -756,7 +766,7 @@ export default function ConversationView({
     // Instagram has 8MB limit, others 10MB
     const maxSize = isInstagram ? 8 * 1024 * 1024 : 10 * 1024 * 1024;
     if (file.size > maxSize) {
-      setError(`File too large. Maximum size is ${isInstagram ? "8MB for Instagram" : "10MB"}.`);
+      setImageValidationError(`File too large. Maximum size is ${isInstagram ? "8MB for Instagram" : "10MB"}.`);
       e.target.value = ""; // Reset input
       return;
     }
@@ -1485,6 +1495,23 @@ export default function ConversationView({
           setTimeout(() => setCreateTicketModalOpen(false), 2000);
         }}
       />
+
+      {/* Image Validation Error Dialog */}
+      <AlertDialog open={!!imageValidationError} onOpenChange={() => setImageValidationError(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Invalid Image Format</AlertDialogTitle>
+            <AlertDialogDescription>
+              {imageValidationError}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setImageValidationError(null)}>
+              OK
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
