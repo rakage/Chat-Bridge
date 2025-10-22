@@ -385,11 +385,38 @@ export default function ConversationsList({
       });
     };
 
+    // Handle new conversation event
+    const handleConversationNew = (data: { conversation: any }) => {
+      console.log("🆕 [ConversationsList] Received conversation:new event:", data);
+      
+      const newConversation = data.conversation;
+      
+      setConversations((prev) => {
+        // Check if conversation already exists
+        const exists = prev.some((conv) => conv.id === newConversation.id);
+        if (exists) {
+          console.log(`⚠️ [ConversationsList] Conversation ${newConversation.id} already exists, skipping`);
+          return prev;
+        }
+        
+        console.log(`✅ [ConversationsList] Adding new conversation ${newConversation.id} to list`);
+        
+        // Add new conversation at the top
+        const updated = [newConversation, ...prev].sort(
+          (a, b) => new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime()
+        );
+        
+        return updated;
+      });
+    };
+
+    socket.on("conversation:new", handleConversationNew);
     socket.on("conversation:read", handleConversationRead);
     socket.on("conversation:view-update", handleConversationViewUpdate);
 
     return () => {
       console.log("🔌 ConversationsList: Cleaning up socket event listeners");
+      socket.off("conversation:new", handleConversationNew);
       socket.off("conversation:read", handleConversationRead);
       socket.off("conversation:view-update", handleConversationViewUpdate);
     };
