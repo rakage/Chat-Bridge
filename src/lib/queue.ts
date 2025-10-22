@@ -882,81 +882,157 @@ export async function initializeWorkers() {
                 throw new Error('Instagram credentials not found - missing userId or access token');
               }
 
-              // Build message payload - text or image attachment
-              let messagePayload: any = { recipient: { id: recipientId } };
+              // Build message payload according to Instagram API documentation
+              // https://developers.facebook.com/docs/instagram-platform/instagram-api-with-instagram-login/send-messages
               
               if (imageUrl) {
-                // Send image with optional caption
-                console.log(`🚀 Sending Instagram image to ${recipientId} using Instagram Graph API`);
-                messagePayload.message = {
-                  attachment: {
-                    type: 'image',
-                    payload: {
-                      url: imageUrl,
-                      is_reusable: true
+                // Send image attachment (per Instagram API docs)
+                console.log(`🚀 Sending Instagram image to ${recipientId} via IG user ${instagramUserId}`);
+                
+                const imagePayload = {
+                  recipient: { id: recipientId },
+                  message: {
+                    attachment: {
+                      type: 'image',
+                      payload: {
+                        url: imageUrl
+                      }
                     }
                   }
                 };
                 
-                // Add text as caption if provided
-                if (messageText) {
-                  messagePayload.message.text = messageText;
-                }
-              } else {
-                // Send text message
-                console.log(`🚀 Sending Instagram text message to ${recipientId} using Instagram Graph API`);
-                messagePayload.message = { text: messageText };
-              }
-              
-              const igResponse = await fetch(`https://graph.instagram.com/v22.0/me/messages`, {
-                method: 'POST',
-                headers: {
-                  'Authorization': `Bearer ${accessToken}`,
-                  'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(messagePayload),
-              });
-
-              if (!igResponse.ok) {
-                const errorText = await igResponse.text();
-                throw new Error(`Instagram API error: ${errorText}`);
-              }
-
-              const igResult = await igResponse.json();
-
-              // Update message with IG delivery status
-              console.log(`✅ Instagram message sent successfully: ${igResult.message_id}`);
-              await db.message.update({
-                where: { id: messageId },
-                data: {
-                  meta: {
-                    ...((msg.meta as any) || {}),
-                    instagramMessageId: igResult.message_id,
-                    sentAt: new Date().toISOString(),
-                    platform: 'instagram',
-                    sent: true,
+                const igImageResponse = await fetch(`https://graph.instagram.com/v24.0/${instagramUserId}/messages`, {
+                  method: 'POST',
+                  headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json'
                   },
-                },
-              });
-
-              // Emit delivery confirmation
-              try {
-                const message = await db.message.findUnique({
-                  where: { id: messageId },
-                  include: { conversation: true },
+                  body: JSON.stringify(imagePayload),
                 });
-                if (message) {
-                  socketService.emitToConversation(message.conversationId, 'message:sent', {
-                    messageId,
-                    instagramMessageId: igResult.message_id,
-                    sentAt: new Date().toISOString(),
-                  });
-                }
-              } catch (socketError) {
-                console.error('Failed to emit IG delivery confirmation:', socketError);
-              }
 
-              return { instagramMessageId: igResult.message_id };
+                if (!igImageResponse.ok) {
+                  const errorText = await igImageResponse.text();
+                  throw new Error(`Instagram image API error: ${errorText}`);
+                }
+
+                const igImageResult = await igImageResponse.json();
+                console.log(`✅ Instagram image sent: ${igImageResult.message_id}`);
+
+                // If there's text, send it as a separate message after the image
+                if (messageText && messageText.trim()) {
+                  console.log(`📤 Sending accompanying text message to ${recipientId}`);
+                  
+                  const textPayload = {
+                    recipient: { id: recipientId },
+                    message: { text: messageText.trim() }
+                  };
+                  
+                  const igTextResponse = await fetch(`https://graph.instagram.com/v24.0/${instagramUserId}/messages`, {
+                    method: 'POST',
+                    headers: {
+                      'Authorization': `Bearer ${accessToken}`,
+                      'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(textPayload),
+                  });
+
+                  if (igTextResponse.ok) {
+                    const igTextResult = await igTextResponse.json();
+                    console.log(`✅ Instagram text sent: ${igTextResult.message_id}`);
+                  }
+                }
+
+                // Update message with IG delivery status
+                await db.message.update({
+                  where: { id: messageId },
+                  data: {
+                    meta: {
+                      ...((msg.meta as any) || {}),
+                      instagramMessageId: igImageResult.message_id,
+                      sentAt: new Date().toISOString(),
+                      platform: 'instagram',
+                      sent: true,
+                    },
+                  },
+                });
+
+                // Emit delivery confirmation
+                try {
+                  const message = await db.message.findUnique({
+                    where: { id: messageId },
+                    include: { conversation: true },
+                  });
+                  if (message) {
+                    socketService.emitToConversation(message.conversationId, 'message:sent', {
+                      messageId,
+                      instagramMessageId: igImageResult.message_id,
+                      sentAt: new Date().toISOString(),
+                    });
+                  }
+                } catch (socketError) {
+                  console.error('Failed to emit IG delivery confirmation:', socketError);
+                }
+
+                return { instagramMessageId: igImageResult.message_id };
+              } else {
+                // Send text message only (per Instagram API docs)
+                console.log(`🚀 Sending Instagram text message to ${recipientId} via IG user ${instagramUserId}`);
+                
+                const textPayload = {
+                  recipient: { id: recipientId },
+                  message: { text: messageText }
+                };
+                
+                const igResponse = await fetch(`https://graph.instagram.com/v24.0/${instagramUserId}/messages`, {
+                  method: 'POST',
+                  headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json'
+                  },
+                  body: JSON.stringify(textPayload),
+                });
+
+                if (!igResponse.ok) {
+                  const errorText = await igResponse.text();
+                  throw new Error(`Instagram API error: ${errorText}`);
+                }
+
+                const igResult = await igResponse.json();
+                console.log(`✅ Instagram text message sent: ${igResult.message_id}`);
+
+                // Update message with IG delivery status
+                await db.message.update({
+                  where: { id: messageId },
+                  data: {
+                    meta: {
+                      ...((msg.meta as any) || {}),
+                      instagramMessageId: igResult.message_id,
+                      sentAt: new Date().toISOString(),
+                      platform: 'instagram',
+                      sent: true,
+                    },
+                  },
+                });
+
+                // Emit delivery confirmation
+                try {
+                  const message = await db.message.findUnique({
+                    where: { id: messageId },
+                    include: { conversation: true },
+                  });
+                  if (message) {
+                    socketService.emitToConversation(message.conversationId, 'message:sent', {
+                      messageId,
+                      instagramMessageId: igResult.message_id,
+                      sentAt: new Date().toISOString(),
+                    });
+                  }
+                } catch (socketError) {
+                  console.error('Failed to emit IG delivery confirmation:', socketError);
+                }
+
+                return { instagramMessageId: igResult.message_id };
+              }
             }
 
             // Default: Facebook Messenger path
