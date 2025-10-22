@@ -1451,17 +1451,18 @@ export async function processInstagramMessageDirect(data: {
       return;
     }
 
-    // Check if this is a newly created conversation to emit the new conversation event
+    // Check if this is a newly created conversation
     const messageCount = await db.message.count({
       where: { conversationId: conversation.id },
     });
+    const isNewConversation = messageCount === 0;
 
-    // If no messages exist, this is a new conversation
-    if (messageCount === 0) {
-      console.log(`🆕 New Instagram conversation detected, emitting conversation:new event`);
+    // If new conversation, get enhanced user profile BEFORE creating message
+    let customerProfile;
+    if (isNewConversation) {
+      console.log(`🆕 New Instagram conversation detected`);
       
       // Try to get enhanced user profile from Instagram API
-      let customerProfile;
       try {
         const accessToken = await decrypt(instagramConnection.accessTokenEnc);
         customerProfile = await getInstagramUserProfile(senderId, accessToken);
@@ -1486,29 +1487,9 @@ export async function processInstagramMessageDirect(data: {
           meta: { customerProfile, platform: "instagram" },
         },
       });
-
-      // Emit new conversation event
-      socketService.emitToCompany(
-        instagramConnection.companyId,
-        "conversation:new",
-        {
-          conversation: {
-            id: conversation.id,
-            psid: conversation.psid,
-            status: conversation.status,
-            autoBot: conversation.autoBot,
-            customerName: customerProfile.fullName,
-            customerProfile: customerProfile,
-            lastMessageAt: conversation.lastMessageAt,
-            messageCount: 0,
-            unreadCount: 1,
-            platform: "INSTAGRAM",
-            pageName: `@${instagramConnection.username}`,
-          },
-        }
-      );
     }
 
+    // Create the message first
     const message = await db.message.create({
       data: {
         conversationId: conversation.id,
@@ -1536,6 +1517,35 @@ export async function processInstagramMessageDirect(data: {
     });
 
     if (fullMessage) {
+      // If this is a new conversation, emit conversation:new event with the first message
+      if (isNewConversation && customerProfile) {
+        console.log(`📤 Emitting conversation:new event for Instagram conversation ${conversation.id}`);
+        socketService.emitToCompany(
+          instagramConnection.companyId,
+          "conversation:new",
+          {
+            conversation: {
+              id: conversation.id,
+              psid: conversation.psid,
+              status: conversation.status,
+              autoBot: conversation.autoBot,
+              customerName: customerProfile.fullName,
+              customerProfile: customerProfile,
+              lastMessageAt: new Date().toISOString(),
+              messageCount: 1,
+              unreadCount: 1,
+              platform: "INSTAGRAM",
+              pageName: `@${instagramConnection.username}`,
+              lastMessage: {
+                text: fullMessage.text,
+                role: fullMessage.role,
+                createdAt: fullMessage.createdAt.toISOString(),
+              },
+            },
+          }
+        );
+      }
+
       const messageEvent = {
         message: {
           id: fullMessage.id,
