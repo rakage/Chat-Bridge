@@ -130,7 +130,7 @@ export default function InstagramSetupPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <h3 className="font-semibold">What you'll need:</h3>
+            <h3 className="font-semibold">What you&apos;ll need:</h3>
             <ul className="list-disc list-inside space-y-1 text-sm text-gray-600">
               <li>Instagram Business or Creator account</li>
               <li>Account connected to a Facebook Page</li>

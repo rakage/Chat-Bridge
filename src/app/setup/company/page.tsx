@@ -55,6 +55,38 @@ export default function CompanySetupPage() {
     }
   }, [status, session, router]);
 
+  // Search for companies with debounce
+  useEffect(() => {
+    if (!searchQuery || searchQuery.length < 2) {
+      setSearchResults([]);
+      return;
+    }
+
+    const timeoutId = setTimeout(async () => {
+      setIsSearching(true);
+
+      try {
+        const response = await fetch(
+          `/api/companies/search?q=${encodeURIComponent(searchQuery)}`
+        );
+
+        if (!response.ok) {
+          throw new Error("Failed to search companies");
+        }
+
+        const data = await response.json();
+        setSearchResults(data.companies || []);
+      } catch (error) {
+        console.error("Search error:", error);
+        setSearchResults([]);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 300); // Debounce delay
+
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery]);
+
   // Show loading while checking authentication or redirecting
   if (status === "loading") {
     return (
@@ -136,38 +168,6 @@ export default function CompanySetupPage() {
       setIsLoading(false);
     }
   };
-
-  // Search for companies with debounce
-  useEffect(() => {
-    if (!searchQuery || searchQuery.length < 2) {
-      setSearchResults([]);
-      return;
-    }
-
-    const timeoutId = setTimeout(async () => {
-      setIsSearching(true);
-
-      try {
-        const response = await fetch(
-          `/api/companies/search?q=${encodeURIComponent(searchQuery)}`
-        );
-
-        if (!response.ok) {
-          throw new Error("Failed to search companies");
-        }
-
-        const data = await response.json();
-        setSearchResults(data.companies || []);
-      } catch (error) {
-        console.error("Search error:", error);
-        setSearchResults([]);
-      } finally {
-        setIsSearching(false);
-      }
-    }, 300); // Debounce delay
-
-    return () => clearTimeout(timeoutId);
-  }, [searchQuery]);
 
   const handleCreateOrJoinCompany = () => {
     setShowDropdown(false);
