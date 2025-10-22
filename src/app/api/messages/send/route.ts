@@ -48,18 +48,38 @@ export async function POST(request: NextRequest) {
       const file = formData.get("image") as File | null;
 
       if (file) {
-        // Validate file type
-        if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+        // Get conversation platform for validation (need to fetch early)
+        const tempConversation = await db.conversation.findUnique({
+          where: { id: conversationId },
+          select: { platform: true }
+        });
+
+        const isInstagram = tempConversation?.platform === "INSTAGRAM";
+
+        // Instagram-specific validation: no WebP, max 8MB
+        // Per Instagram API: https://developers.facebook.com/docs/instagram-platform/instagram-api-with-instagram-login/send-messages
+        const allowedTypes = isInstagram
+          ? ["image/jpeg", "image/jpg", "image/png", "image/gif"]
+          : ALLOWED_IMAGE_TYPES;
+
+        if (!allowedTypes.includes(file.type)) {
+          if (isInstagram && file.type === "image/webp") {
+            return NextResponse.json(
+              { error: "Instagram doesn't support WebP images. Please use JPEG, PNG, or GIF format." },
+              { status: 400 }
+            );
+          }
           return NextResponse.json(
-            { error: "Invalid file type. Only JPEG, PNG, WebP, and GIF images are allowed." },
+            { error: `Invalid file type. Only ${isInstagram ? "JPEG, PNG, and GIF" : "JPEG, PNG, WebP, and GIF"} images are allowed.` },
             { status: 400 }
           );
         }
 
-        // Validate file size
-        if (file.size > MAX_FILE_SIZE) {
+        // Instagram has 8MB limit, others 10MB
+        const maxSize = isInstagram ? 8 * 1024 * 1024 : MAX_FILE_SIZE;
+        if (file.size > maxSize) {
           return NextResponse.json(
-            { error: "File too large. Maximum size is 10MB." },
+            { error: `File too large. Maximum size is ${isInstagram ? "8MB for Instagram" : "10MB"}.` },
             { status: 400 }
           );
         }

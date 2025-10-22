@@ -733,18 +733,30 @@ export default function ConversationView({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate file type
-    const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif"];
+    // Platform-specific validation
+    const platform = conversation?.platform;
+    
+    // Instagram only supports PNG, JPEG, and GIF (no WebP)
+    // Per Instagram API docs: https://developers.facebook.com/docs/instagram-platform/instagram-api-with-instagram-login/send-messages
+    const isInstagram = platform === "INSTAGRAM";
+    const allowedTypes = isInstagram 
+      ? ["image/jpeg", "image/jpg", "image/png", "image/gif"]
+      : ["image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif"];
+    
     if (!allowedTypes.includes(file.type)) {
-      setError("Invalid file type. Only JPEG, PNG, WebP, and GIF images are allowed.");
+      if (isInstagram && file.type === "image/webp") {
+        setError("Instagram doesn't support WebP images. Please use JPEG, PNG, or GIF format.");
+      } else {
+        setError(`Invalid file type. Only ${isInstagram ? "JPEG, PNG, and GIF" : "JPEG, PNG, WebP, and GIF"} images are allowed.`);
+      }
       e.target.value = ""; // Reset input
       return;
     }
 
-    // Validate file size (10MB)
-    const maxSize = 10 * 1024 * 1024;
+    // Instagram has 8MB limit, others 10MB
+    const maxSize = isInstagram ? 8 * 1024 * 1024 : 10 * 1024 * 1024;
     if (file.size > maxSize) {
-      setError("File too large. Maximum size is 10MB.");
+      setError(`File too large. Maximum size is ${isInstagram ? "8MB for Instagram" : "10MB"}.`);
       e.target.value = ""; // Reset input
       return;
     }
@@ -1383,7 +1395,9 @@ export default function ConversationView({
               <input
                 type="file"
                 id="image-upload"
-                accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
+                accept={conversation?.platform === "INSTAGRAM" 
+                  ? "image/jpeg,image/jpg,image/png,image/gif"
+                  : "image/jpeg,image/jpg,image/png,image/webp,image/gif"}
                 onChange={handleImageSelect}
                 className="hidden"
               />
