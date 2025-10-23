@@ -29,6 +29,22 @@ export default function FacebookManagePage() {
   useEffect(() => {
     loadPageConnections();
     checkLLMConfig();
+    
+    // Handle OAuth callback success/error messages
+    const urlParams = new URLSearchParams(window.location.search);
+    const facebookSuccess = urlParams.get("facebook_success");
+    const messageParam = urlParams.get("message");
+    const errorParam = urlParams.get("error");
+
+    if (facebookSuccess === "true" && messageParam) {
+      setSuccess(decodeURIComponent(messageParam));
+      // Clean URL
+      window.history.replaceState({}, '', window.location.pathname);
+    } else if (errorParam) {
+      setError(decodeURIComponent(errorParam));
+      // Clean URL
+      window.history.replaceState({}, '', window.location.pathname);
+    }
   }, []);
 
   const loadPageConnections = async () => {

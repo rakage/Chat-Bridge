@@ -208,7 +208,7 @@ export async function GET(request: NextRequest) {
         
         return NextResponse.redirect(
           new URL(
-            `/dashboard/integrations?facebook_success=true&message=${encodeURIComponent(successMessage)}${errorMessage ? `&error=${encodeURIComponent(errorMessage)}` : ''}`,
+            `/dashboard/integrations/facebook/manage?facebook_success=true&message=${encodeURIComponent(successMessage)}${errorMessage ? `&error=${encodeURIComponent(errorMessage)}` : ''}`,
             process.env.NEXTAUTH_URL
           )
         );
@@ -216,7 +216,7 @@ export async function GET(request: NextRequest) {
         // No pages found, redirect with appropriate message
         return NextResponse.redirect(
           new URL(
-            `/dashboard/integrations?facebook_success=true&message=${encodeURIComponent('Facebook login successful but no pages found')}`,
+            `/dashboard/integrations/facebook/manage?facebook_success=true&message=${encodeURIComponent('Facebook login successful but no pages found')}`,
             process.env.NEXTAUTH_URL
           )
         );
