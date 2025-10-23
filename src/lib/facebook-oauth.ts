@@ -90,15 +90,9 @@ export class FacebookOAuth {
       client_id: this.config.clientId,
       redirect_uri: this.config.redirectUri,
       scope: [
-        "business_management",
         "pages_show_list", 
         "pages_manage_metadata",
         "pages_messaging",
-        "pages_manage_posts",
-        "pages_read_engagement",
-        "pages_manage_engagement",
-        "pages_read_user_content",
-        "pages_utility_messaging",
         "public_profile"
       ].join(","),
       state: state || this.generateState(),

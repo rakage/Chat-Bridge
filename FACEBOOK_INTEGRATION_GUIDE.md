@@ -43,7 +43,7 @@ The system supports all Facebook Login for Business permissions:
 #### Core Permissions
 - `ads_management` - Manage advertising accounts
 - `ads_read` - Read advertising data
-- `business_management` - Manage business settings
+
 - `pages_messaging` - Send messages on behalf of pages
 - `pages_manage_posts` - Create and manage posts
 - `instagram_basic` - Access Instagram account info
@@ -61,8 +61,7 @@ The system supports all Facebook Login for Business permissions:
      "token_type": "business_system_user",
      "permissions": [
        "pages_messaging",
-       "pages_manage_posts",
-       "business_management"
+       "pages_manage_posts"
      ],
      "assets": ["page-id-1", "page-id-2"]
    }

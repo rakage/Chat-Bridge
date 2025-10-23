@@ -66,11 +66,7 @@ export class InstagramOAuth {
       scope: [
         "instagram_basic",
         "instagram_manage_messages",
-        "instagram_manage_comments",
-        "instagram_content_publish",
-        "pages_read_engagement",
-        "pages_show_list",
-        "business_management"
+        "pages_show_list"
       ].join(","),
       response_type: "code",
       state: state || this.generateState()

@@ -27,11 +27,9 @@ export async function GET(request: NextRequest) {
     facebookOAuthUrl.searchParams.set("redirect_uri", redirectUri);
     facebookOAuthUrl.searchParams.set("response_type", "code");
     facebookOAuthUrl.searchParams.set("scope", [
-      "pages_read_engagement",
       "pages_show_list", 
       "instagram_basic",
-      "instagram_manage_messages",
-      "instagram_manage_comments"
+      "instagram_manage_messages"
     ].join(","));
     facebookOAuthUrl.searchParams.set("state", `${session.user.id}_${Date.now()}_instagram`);
 
