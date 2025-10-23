@@ -272,23 +272,31 @@ export async function initializeWorkers() {
 
               // Emit new conversation event to company room
               try {
+                const conversationPayload = {
+                  id: conversation.id,
+                  psid: conversation.psid,
+                  platform: "FACEBOOK" as const,
+                  status: conversation.status,
+                  autoBot: conversation.autoBot,
+                  customerName:
+                    customerProfile?.fullName ||
+                    `Customer ${senderId.slice(-4)}`,
+                  customerProfile: customerProfile,
+                  lastMessageAt: conversation.lastMessageAt.toISOString(),
+                  messageCount: 0,
+                  unreadCount: 1,
+                  pageName: pageConnection.pageName,
+                  lastMessage: {
+                    text: messageText,
+                    role: "USER" as const,
+                  },
+                };
+
                 socketService.emitToCompany(
                   pageConnection.companyId,
                   "conversation:new",
                   {
-                    conversation: {
-                      id: conversation.id,
-                      psid: conversation.psid,
-                      status: conversation.status,
-                      autoBot: conversation.autoBot,
-                      customerName:
-                        customerProfile?.fullName ||
-                        `Customer ${senderId.slice(-4)}`,
-                      customerProfile: customerProfile,
-                      lastMessageAt: conversation.lastMessageAt,
-                      messageCount: 0,
-                      unreadCount: 1,
-                    },
+                    conversation: conversationPayload,
                   }
                 );
                 console.log(
@@ -301,19 +309,7 @@ export async function initializeWorkers() {
                     "dev-company",
                     "conversation:new",
                     {
-                      conversation: {
-                        id: conversation.id,
-                        psid: conversation.psid,
-                        status: conversation.status,
-                        autoBot: conversation.autoBot,
-                        customerName:
-                          customerProfile?.fullName ||
-                          `Customer ${senderId.slice(-4)}`,
-                        customerProfile: customerProfile,
-                        lastMessageAt: conversation.lastMessageAt,
-                        messageCount: 0,
-                        unreadCount: 1,
-                      },
+                      conversation: conversationPayload,
                     }
                   );
                   console.log(
@@ -1242,22 +1238,30 @@ export async function processIncomingMessageDirect(
 
       // Emit new conversation event to company room
       try {
+        const conversationPayload = {
+          id: conversation.id,
+          psid: conversation.psid,
+          platform: "FACEBOOK" as const,
+          status: conversation.status,
+          autoBot: conversation.autoBot,
+          customerName:
+            customerProfile?.fullName || `Customer ${senderId.slice(-4)}`,
+          customerProfile: customerProfile,
+          lastMessageAt: conversation.lastMessageAt.toISOString(),
+          messageCount: 0,
+          unreadCount: 1,
+          pageName: pageConnection.pageName,
+          lastMessage: {
+            text: messageText,
+            role: "USER" as const,
+          },
+        };
+
         socketService.emitToCompany(
           pageConnection.companyId,
           "conversation:new",
           {
-            conversation: {
-              id: conversation.id,
-              psid: conversation.psid,
-              status: conversation.status,
-              autoBot: conversation.autoBot,
-              customerName:
-                customerProfile?.fullName || `Customer ${senderId.slice(-4)}`,
-              customerProfile: customerProfile,
-              lastMessageAt: conversation.lastMessageAt,
-              messageCount: 0,
-              unreadCount: 1,
-            },
+            conversation: conversationPayload,
           }
         );
         console.log(
@@ -1267,18 +1271,7 @@ export async function processIncomingMessageDirect(
         // Also emit to development company room
         if (process.env.NODE_ENV === "development") {
           socketService.emitToCompany("dev-company", "conversation:new", {
-            conversation: {
-              id: conversation.id,
-              psid: conversation.psid,
-              status: conversation.status,
-              autoBot: conversation.autoBot,
-              customerName:
-                customerProfile?.fullName || `Customer ${senderId.slice(-4)}`,
-              customerProfile: customerProfile,
-              lastMessageAt: conversation.lastMessageAt,
-              messageCount: 0,
-              unreadCount: 1,
-            },
+            conversation: conversationPayload,
           });
           console.log(`Emitted conversation:new event to dev-company room`);
         }
