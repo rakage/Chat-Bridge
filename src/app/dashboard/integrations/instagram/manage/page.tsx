@@ -29,6 +29,22 @@ export default function InstagramManagePage() {
   useEffect(() => {
     loadConnections();
     checkLLMConfig();
+    
+    // Handle OAuth callback success/error messages
+    const urlParams = new URLSearchParams(window.location.search);
+    const instagramSuccess = urlParams.get("instagram_success");
+    const messageParam = urlParams.get("message");
+    const errorParam = urlParams.get("error");
+
+    if (instagramSuccess === "true" && messageParam) {
+      setSuccess(decodeURIComponent(messageParam));
+      // Clean URL
+      window.history.replaceState({}, '', window.location.pathname);
+    } else if (errorParam) {
+      setError(decodeURIComponent(errorParam));
+      // Clean URL
+      window.history.replaceState({}, '', window.location.pathname);
+    }
   }, []);
 
   const loadConnections = async () => {

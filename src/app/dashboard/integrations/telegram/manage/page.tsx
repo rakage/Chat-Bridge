@@ -29,6 +29,22 @@ export default function TelegramManagePage() {
   useEffect(() => {
     loadConnections();
     checkLLMConfig();
+    
+    // Handle success/error messages from URL params
+    const urlParams = new URLSearchParams(window.location.search);
+    const telegramSuccess = urlParams.get("telegram_success");
+    const messageParam = urlParams.get("message");
+    const errorParam = urlParams.get("error");
+
+    if (telegramSuccess === "true" && messageParam) {
+      setSuccess(decodeURIComponent(messageParam));
+      // Clean URL
+      window.history.replaceState({}, '', window.location.pathname);
+    } else if (errorParam) {
+      setError(decodeURIComponent(errorParam));
+      // Clean URL
+      window.history.replaceState({}, '', window.location.pathname);
+    }
   }, []);
 
   const loadConnections = async () => {

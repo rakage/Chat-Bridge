@@ -29,7 +29,6 @@ export default function InstagramSetupPage() {
       (async () => {
         try {
           const data = JSON.parse(decodeURIComponent(instagramDataParam));
-          setSuccess(`Successfully connected Instagram account @${data.userProfile.username}!`);
           
           // Clean URL
           const cleanUrl = window.location.pathname;
@@ -38,10 +37,8 @@ export default function InstagramSetupPage() {
           // Save Instagram connection data to backend
           await saveInstagramConnection(data);
           
-          // Redirect to manage page after successful connection
-          setTimeout(() => {
-            router.push("/dashboard/integrations/instagram/manage");
-          }, 2000);
+          // Redirect to manage page with success message
+          router.push(`/dashboard/integrations/instagram/manage?instagram_success=true&message=${encodeURIComponent(`Successfully connected Instagram account @${data.userProfile.username}!`)}`);
         } catch (parseError) {
           console.error("Failed to parse Instagram data:", parseError);
           setError("Failed to process Instagram login data");
