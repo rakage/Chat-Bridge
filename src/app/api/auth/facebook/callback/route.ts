@@ -22,14 +22,14 @@ export async function GET(request: NextRequest) {
     if (error) {
       console.error("❌ Facebook OAuth error:", error, errorDescription);
       return NextResponse.redirect(
-        new URL(`/dashboard/integrations?error=${encodeURIComponent(errorDescription || error)}`, request.url)
+        new URL(`/dashboard/integrations?error=${encodeURIComponent(errorDescription || error)}`, process.env.NEXTAUTH_URL)
       );
     }
 
     if (!code) {
       console.error("❌ No authorization code received");
       return NextResponse.redirect(
-        new URL("/dashboard/integrations?error=No authorization code received", request.url)
+        new URL("/dashboard/integrations?error=No authorization code received", process.env.NEXTAUTH_URL)
       );
     }
 
@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
     if (!session?.user) {
       console.error("❌ No user session found");
       return NextResponse.redirect(
-        new URL("/auth/login?error=Please login first", request.url)
+        new URL("/auth/login?error=Please login first", process.env.NEXTAUTH_URL)
       );
     }
 
@@ -209,7 +209,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.redirect(
           new URL(
             `/dashboard/integrations?facebook_success=true&message=${encodeURIComponent(successMessage)}${errorMessage ? `&error=${encodeURIComponent(errorMessage)}` : ''}`,
-            request.url
+            process.env.NEXTAUTH_URL
           )
         );
       } else {
@@ -217,7 +217,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.redirect(
           new URL(
             `/dashboard/integrations?facebook_success=true&message=${encodeURIComponent('Facebook login successful but no pages found')}`,
-            request.url
+            process.env.NEXTAUTH_URL
           )
         );
       }
@@ -226,14 +226,14 @@ export async function GET(request: NextRequest) {
       console.error("❌ Facebook API error:", apiError);
       const errorMessage = apiError instanceof Error ? apiError.message : "Failed to authenticate with Facebook";
       return NextResponse.redirect(
-        new URL(`/dashboard/integrations?error=${encodeURIComponent(errorMessage)}`, request.url)
+        new URL(`/dashboard/integrations?error=${encodeURIComponent(errorMessage)}`, process.env.NEXTAUTH_URL)
       );
     }
 
   } catch (error) {
     console.error("❌ OAuth callback error:", error);
     return NextResponse.redirect(
-      new URL("/dashboard/integrations?error=Authentication failed", request.url)
+      new URL("/dashboard/integrations?error=Authentication failed", process.env.NEXTAUTH_URL)
     );
   }
 }

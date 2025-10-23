@@ -14,20 +14,20 @@ export async function GET(request: NextRequest) {
     if (error) {
       console.error("❌ Facebook OAuth error:", error);
       return NextResponse.redirect(
-        new URL(`/dashboard/integrations?error=${encodeURIComponent(error)}`, request.url)
+        new URL(`/dashboard/integrations?error=${encodeURIComponent(error)}`, process.env.NEXTAUTH_URL)
       );
     }
 
     if (!code) {
       return NextResponse.redirect(
-        new URL("/dashboard/integrations?error=No authorization code received", request.url)
+        new URL("/dashboard/integrations?error=No authorization code received", process.env.NEXTAUTH_URL)
       );
     }
 
     const session = await getServerSession(authOptions);
     if (!session?.user) {
       return NextResponse.redirect(
-        new URL("/auth/login?error=Please login first", request.url)
+        new URL("/auth/login?error=Please login first", process.env.NEXTAUTH_URL)
       );
     }
 
@@ -105,7 +105,7 @@ export async function GET(request: NextRequest) {
       if (instagramAccounts.length === 0) {
         console.error("❌ No Instagram Business Accounts found");
         return NextResponse.redirect(
-          new URL("/dashboard/integrations?error=No Instagram Business Accounts found. Please connect your Instagram account to a Facebook Page.", request.url)
+          new URL("/dashboard/integrations?error=No Instagram Business Accounts found. Please connect your Instagram account to a Facebook Page.", process.env.NEXTAUTH_URL)
         );
       }
 
@@ -126,21 +126,21 @@ export async function GET(request: NextRequest) {
       }));
 
       return NextResponse.redirect(
-        new URL(`/dashboard/integrations?instagram_success=true&instagram_data=${instagramData}`, request.url)
+        new URL(`/dashboard/integrations?instagram_success=true&instagram_data=${instagramData}`, process.env.NEXTAUTH_URL)
       );
 
     } catch (apiError) {
       console.error("❌ Facebook API error:", apiError);
       const errorMessage = apiError instanceof Error ? apiError.message : "Failed to connect Instagram via Facebook";
       return NextResponse.redirect(
-        new URL(`/dashboard/integrations?error=${encodeURIComponent(errorMessage)}`, request.url)
+        new URL(`/dashboard/integrations?error=${encodeURIComponent(errorMessage)}`, process.env.NEXTAUTH_URL)
       );
     }
 
   } catch (error) {
     console.error("❌ Facebook Instagram callback error:", error);
     return NextResponse.redirect(
-      new URL("/dashboard/integrations?error=Instagram connection failed", request.url)
+      new URL("/dashboard/integrations?error=Instagram connection failed", process.env.NEXTAUTH_URL)
     );
   }
 }
