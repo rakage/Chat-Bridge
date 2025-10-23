@@ -446,6 +446,23 @@ export async function initializeWorkers() {
                     "message:new",
                     messageEvent
                   );
+
+                  // Emit conversation:view-update for real-time UI updates (for ConversationsList)
+                  socketService.emitToCompany(
+                    companyId,
+                    "conversation:view-update",
+                    {
+                      conversationId: conversation.id,
+                      type: "new_message",
+                      message: {
+                        text: fullMessage.text,
+                        role: fullMessage.role,
+                        createdAt: fullMessage.createdAt.toISOString(),
+                      },
+                      lastMessageAt: new Date().toISOString(),
+                      timestamp: new Date().toISOString(),
+                    }
+                  );
                 }
 
                 // Also emit to development company room
@@ -465,6 +482,23 @@ export async function initializeWorkers() {
                     "dev-company",
                     "message:new",
                     messageEvent
+                  );
+
+                  // Emit conversation:view-update for real-time UI updates (for ConversationsList)
+                  socketService.emitToCompany(
+                    "dev-company",
+                    "conversation:view-update",
+                    {
+                      conversationId: conversation.id,
+                      type: "new_message",
+                      message: {
+                        text: fullMessage.text,
+                        role: fullMessage.role,
+                        createdAt: fullMessage.createdAt.toISOString(),
+                      },
+                      lastMessageAt: new Date().toISOString(),
+                      timestamp: new Date().toISOString(),
+                    }
                   );
                 }
               }
@@ -1414,6 +1448,22 @@ export async function processIncomingMessageDirect(
             "dev-company",
             "message:new",
             messageEvent
+          );
+
+          socketService.emitToCompany(
+            "dev-company",
+            "conversation:view-update",
+            {
+              conversationId: conversation.id,
+              type: "new_message",
+              message: {
+                text: fullMessage.text,
+                role: fullMessage.role,
+                createdAt: fullMessage.createdAt.toISOString(),
+              },
+              lastMessageAt: new Date().toISOString(),
+              timestamp: new Date().toISOString(),
+            }
           );
         }
       }
