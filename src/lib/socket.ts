@@ -22,6 +22,10 @@ class SocketService {
         credentials: true,
       },
       transports: ["websocket", "polling"],
+      pingTimeout: 60000, // 60 seconds - increased from default 20s
+      pingInterval: 25000, // 25 seconds - increased from default 25s
+      connectTimeout: 45000, // 45 seconds connection timeout
+      allowEIO3: true, // Allow Engine.IO v3 clients
     });
 
     this.io.use(async (socket: SocketWithAuth, next) => {
@@ -55,7 +59,7 @@ class SocketService {
     });
 
     this.io.on("connection", (socket: SocketWithAuth) => {
-      console.log(`User ${socket.userId} connected`);
+      console.log(`✅ User ${socket.userId} connected (ID: ${socket.id})`);
 
       // Join user to their company room
       if (socket.companyId) {
@@ -70,6 +74,13 @@ class SocketService {
         socket.join("company:dev-company");
         console.log(`✅ Development mode: User joined dev-company room`);
       }
+
+      // Handle explicit join:company event from client
+      socket.on("join:company", (companyId: string) => {
+        socket.join(`company:${companyId}`);
+        console.log(`✅ User ${socket.userId} manually joined company:${companyId}`);
+        socket.emit("joined:company", { companyId, success: true });
+      });
 
       // Handle joining conversation rooms
       socket.on("join:conversation", async (conversationId: string) => {
@@ -181,8 +192,17 @@ class SocketService {
         }
       });
 
-      socket.on("disconnect", () => {
-        console.log(`User ${socket.userId} disconnected`);
+      socket.on("disconnect", (reason) => {
+        console.log(`⚠️ User ${socket.userId} disconnected. Reason: ${reason}, Transport: ${socket.conn?.transport?.name || 'unknown'}`);
+
+        // Log more details for debugging
+        if (reason === "ping timeout") {
+          console.warn(`⏱️ Ping timeout for user ${socket.userId} - client may be in background tab`);
+        } else if (reason === "transport close") {
+          console.warn(`🔌 Transport closed for user ${socket.userId} - connection lost`);
+        } else if (reason === "transport error") {
+          console.error(`❌ Transport error for user ${socket.userId}`);
+        }
 
         // Notify company members of offline status
         if (socket.companyId) {
