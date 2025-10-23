@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { io, Socket } from "socket.io-client";
 
@@ -13,6 +13,7 @@ export function useSocket(options: UseSocketOptions = { autoConnect: true }) {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const disconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (status === "loading") return;
@@ -26,22 +27,33 @@ export function useSocket(options: UseSocketOptions = { autoConnect: true }) {
       return;
     }
 
-    // Create socket connection
+    // Create socket connection with aggressive settings to survive tab switching
     const newSocket = io(
       process.env.NEXT_PUBLIC_SOCKET_URL || window.location.origin,
       {
-        transports: ["websocket", "polling"],
+        transports: ["websocket"], // Use WebSocket only for more stable connection
+        upgrade: false, // Don't upgrade transport
         reconnection: true,
-        reconnectionDelay: 1000,
-        reconnectionDelayMax: 5000,
+        reconnectionDelay: 500,
+        reconnectionDelayMax: 2000,
         reconnectionAttempts: Infinity,
-        timeout: 20000,
+        timeout: 30000,
         autoConnect: true,
+        // Match server-side timeouts
+        path: "/socket.io/",
+        closeOnBeforeunload: false, // Don't close on page unload
       }
     );
 
     newSocket.on("connect", () => {
       console.log("✅ Connected to Socket.IO server");
+      
+      // Clear any pending disconnect timeout
+      if (disconnectTimeoutRef.current) {
+        clearTimeout(disconnectTimeoutRef.current);
+        disconnectTimeoutRef.current = null;
+      }
+      
       setIsConnected(true);
       setError(null);
 
@@ -81,12 +93,33 @@ export function useSocket(options: UseSocketOptions = { autoConnect: true }) {
 
     newSocket.on("disconnect", (reason) => {
       console.log("⚠️ Disconnected from Socket.IO server. Reason:", reason);
-      setIsConnected(false);
+      
+      // Use grace period before showing as disconnected
+      // This prevents flickering "Offline" status during tab switches
+      if (disconnectTimeoutRef.current) {
+        clearTimeout(disconnectTimeoutRef.current);
+      }
+      
+      disconnectTimeoutRef.current = setTimeout(() => {
+        // Only set disconnected if still not connected after grace period
+        if (!newSocket.connected) {
+          console.log("❌ Still disconnected after grace period");
+          setIsConnected(false);
+        }
+      }, 3000); // 3 second grace period
       
       // Auto-reconnect unless it's a manual disconnect
       if (reason === "io server disconnect") {
         // Server initiated the disconnect, manually reconnect
+        console.log("🔄 Server disconnected us, reconnecting...");
         newSocket.connect();
+      } else if (reason === "ping timeout") {
+        // Ping timeout (browser throttling), reconnect immediately
+        console.log("🔄 Ping timeout (tab throttling), reconnecting...");
+        newSocket.connect();
+      } else if (reason === "transport close") {
+        // Transport closed, will auto-reconnect
+        console.log("🔄 Transport closed, auto-reconnect will handle it");
       }
     });
 
@@ -123,6 +156,12 @@ export function useSocket(options: UseSocketOptions = { autoConnect: true }) {
     return () => {
       console.log("🧹 Cleaning up socket hook");
       document.removeEventListener("visibilitychange", handleVisibilityChange);
+      
+      // Clear any pending disconnect timeout
+      if (disconnectTimeoutRef.current) {
+        clearTimeout(disconnectTimeoutRef.current);
+        disconnectTimeoutRef.current = null;
+      }
       
       // Only disconnect if we're actually unmounting (not just tab switching)
       // The socket will auto-reconnect if needed due to reconnection settings

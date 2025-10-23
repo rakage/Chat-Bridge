@@ -22,10 +22,16 @@ class SocketService {
         credentials: true,
       },
       transports: ["websocket", "polling"],
-      pingTimeout: 60000, // 60 seconds - increased from default 20s
-      pingInterval: 25000, // 25 seconds - increased from default 25s
-      connectTimeout: 45000, // 45 seconds connection timeout
+      // Aggressive timeouts to survive browser tab throttling
+      pingTimeout: 120000, // 2 minutes - very long to survive background tabs
+      pingInterval: 30000, // 30 seconds - send ping every 30s
+      connectTimeout: 60000, // 60 seconds connection timeout
+      upgradeTimeout: 30000, // 30 seconds upgrade timeout
+      maxHttpBufferSize: 1e6, // 1MB
       allowEIO3: true, // Allow Engine.IO v3 clients
+      // Enable WebSocket compression for better performance
+      perMessageDeflate: true,
+      httpCompression: true,
     });
 
     this.io.use(async (socket: SocketWithAuth, next) => {
