@@ -1683,30 +1683,38 @@ export async function processInstagramMessageDirect(data: {
       // If this is a new conversation, emit conversation:new event with the first message
       if (isNewConversation && customerProfile) {
         console.log(`📤 Emitting conversation:new event for Instagram conversation ${conversation.id}`);
+        const newConversationPayload = {
+          conversation: {
+            id: conversation.id,
+            psid: conversation.psid,
+            status: conversation.status,
+            autoBot: conversation.autoBot,
+            customerName: customerProfile.fullName,
+            customerProfile: customerProfile,
+            lastMessageAt: new Date().toISOString(),
+            messageCount: 1,
+            unreadCount: 1,
+            platform: "INSTAGRAM",
+            pageName: `@${instagramConnection.username}`,
+            lastMessage: {
+              text: fullMessage.text,
+              role: fullMessage.role,
+              createdAt: fullMessage.createdAt.toISOString(),
+            },
+          },
+        };
+        
         socketService.emitToCompany(
           instagramConnection.companyId,
           "conversation:new",
-          {
-            conversation: {
-              id: conversation.id,
-              psid: conversation.psid,
-              status: conversation.status,
-              autoBot: conversation.autoBot,
-              customerName: customerProfile.fullName,
-              customerProfile: customerProfile,
-              lastMessageAt: new Date().toISOString(),
-              messageCount: 1,
-              unreadCount: 1,
-              platform: "INSTAGRAM",
-              pageName: `@${instagramConnection.username}`,
-              lastMessage: {
-                text: fullMessage.text,
-                role: fullMessage.role,
-                createdAt: fullMessage.createdAt.toISOString(),
-              },
-            },
-          }
+          newConversationPayload
         );
+
+        // Also emit to development company room
+        if (process.env.NODE_ENV === "development") {
+          socketService.emitToCompany("dev-company", "conversation:new", newConversationPayload);
+          console.log(`📡 [Instagram] Emitted conversation:new to dev-company room`);
+        }
       }
 
       const messageEvent = {
@@ -1745,6 +1753,27 @@ export async function processInstagramMessageDirect(data: {
           timestamp: new Date().toISOString(),
         }
       );
+
+      // Also emit to development company room
+      if (process.env.NODE_ENV === "development") {
+        socketService.emitToCompany("dev-company", "message:new", messageEvent);
+        socketService.emitToCompany(
+          "dev-company",
+          "conversation:view-update",
+          {
+            conversationId: conversation.id,
+            type: "new_message",
+            message: {
+              text: fullMessage.text,
+              role: fullMessage.role,
+              createdAt: fullMessage.createdAt.toISOString(),
+            },
+            lastMessageAt: new Date().toISOString(),
+            timestamp: new Date().toISOString(),
+          }
+        );
+        console.log(`📡 [Instagram] Emitted message events to dev-company room`);
+      }
     }
 
     if (conversation.autoBot) {
@@ -1808,6 +1837,28 @@ export async function processInstagramMessageDirect(data: {
             timestamp: new Date().toISOString(),
           }
         );
+
+        // Also emit to development company room
+        if (process.env.NODE_ENV === "development") {
+          socketService.emitToCompany("dev-company", "message:new", botMessageEvent);
+          socketService.emitToCompany(
+            "dev-company",
+            "conversation:view-update",
+            {
+              conversationId: conversation.id,
+              type: "new_message",
+              message: {
+                text: botMessage.text,
+                role: botMessage.role,
+                createdAt: botMessage.createdAt.toISOString(),
+              },
+              lastMessageAt: new Date().toISOString(),
+              autoBot: conversation.autoBot,
+              timestamp: new Date().toISOString(),
+            }
+          );
+          console.log(`📡 [Instagram] Emitted bot message events to dev-company room`);
+        }
       }
     }
   } catch (error) {

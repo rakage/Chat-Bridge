@@ -1083,7 +1083,7 @@ export default function ConversationsList({
                           </div>
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p>Facebook Messenger</p>
+                          <p>Facebook Messenger{conversation.pageName ? ` - ${conversation.pageName}` : ''}</p>
                         </TooltipContent>
                       </Tooltip>
                     )}
