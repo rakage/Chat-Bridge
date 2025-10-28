@@ -66,18 +66,21 @@ export async function GET(
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
-    // Check if we have cached profile data (skip if force refresh)
+    // For Instagram and Facebook, always fetch fresh profile data to avoid expired photo URLs
+    // Only use cache for Widget and Telegram platforms
     const cachedProfile = conversation.meta as any;
-    if (
-      !forceRefresh &&
+    const shouldUseCache = 
+      !forceRefresh && 
+      (conversation.platform === 'WIDGET' || conversation.platform === 'TELEGRAM') &&
       cachedProfile?.customerProfile?.cached &&
-      cachedProfile?.customerProfile?.cachedAt
-    ) {
+      cachedProfile?.customerProfile?.cachedAt;
+      
+    if (shouldUseCache) {
       const cacheAge =
         Date.now() - new Date(cachedProfile.customerProfile.cachedAt).getTime();
-      // Cache for 24 hours
+      // Cache for 24 hours (Widget and Telegram only)
       if (cacheAge < 24 * 60 * 60 * 1000) {
-        console.log(`📦 Returning cached profile (age: ${Math.floor(cacheAge / 1000 / 60)} minutes)`);
+        console.log(`📦 Returning cached ${conversation.platform} profile (age: ${Math.floor(cacheAge / 1000 / 60)} minutes)`);
         return NextResponse.json({
           profile: cachedProfile.customerProfile,
           source: "cache",
@@ -87,6 +90,10 @@ export async function GET(
     
     if (forceRefresh) {
       console.log(`🔄 Force refresh requested for conversation ${conversationId}`);
+    }
+    
+    if (conversation.platform === 'INSTAGRAM' || conversation.platform === 'FACEBOOK') {
+      console.log(`🔄 Always fetching fresh ${conversation.platform} profile to avoid expired URLs`);
     }
 
     // For Widget, return customer info from conversation
@@ -185,19 +192,70 @@ export async function GET(
       });
     }
     
-    // For Instagram, we can't fetch profile from API, return cached or default
+    // For Instagram, always fetch fresh profile data from Instagram API
     if (conversation.platform === 'INSTAGRAM') {
-      // Return cached Instagram profile if available
+      if (!conversation.instagramConnection) {
+        console.error(`No Instagram connection found for conversation ${conversationId}`);
+        return NextResponse.json({ error: "Instagram connection not found" }, { status: 404 });
+      }
+
+      try {
+        // Decrypt Instagram access token
+        const accessToken = await decrypt(conversation.instagramConnection.accessTokenEnc);
+        
+        // Always fetch fresh profile from Instagram API
+        console.log(`🔄 Fetching fresh Instagram profile for customer ${conversation.psid}`);
+        
+        const { getInstagramUserProfile } = await import("@/lib/instagram-conversation-helper");
+        const freshProfile = await getInstagramUserProfile(conversation.psid, accessToken);
+        
+        if (freshProfile) {
+          console.log(`✅ Fresh Instagram profile fetched: @${freshProfile.username}`);
+          
+          // Update conversation with fresh profile data (but don't cache the profile picture URL)
+          const updatedProfile = {
+            ...freshProfile,
+            email: conversation.customerEmail || undefined,
+            phone: conversation.customerPhone || undefined,
+            address: conversation.customerAddress || undefined,
+            platform: "instagram",
+            cached: false, // Mark as not cached since we always fetch fresh
+            cachedAt: new Date().toISOString(),
+          };
+          
+          // Update conversation metadata with fresh profile (without caching)
+          await db.conversation.update({
+            where: { id: conversationId },
+            data: {
+              meta: {
+                ...((conversation.meta as any) || {}),
+                customerProfile: updatedProfile,
+              },
+            },
+          });
+          
+          return NextResponse.json({
+            profile: updatedProfile,
+            source: "instagram_api_fresh",
+          });
+        }
+      } catch (instagramError) {
+        console.error("Instagram API error:", instagramError);
+        // Fall back to cached data if API fails
+      }
+      
+      // Fallback: Return cached or default profile if API fails
       if (cachedProfile?.customerProfile) {
+        console.log(`⚠️ Instagram API failed, returning cached profile`);
         return NextResponse.json({
           profile: cachedProfile.customerProfile,
-          source: "cache",
+          source: "cache_fallback",
         });
       }
       
-      // Try to get Instagram username from conversation data
+      // Last resort: Create default profile
       const instagramUsername = conversation.customerName || `ig_user_${conversation.psid.slice(-4)}`;
-      const instagramProfile = {
+      const defaultProfile = {
         id: conversation.psid,
         firstName: instagramUsername.split(' ')[0] || "Instagram",
         lastName: instagramUsername.split(' ').slice(1).join(' ') || "User",
@@ -209,42 +267,35 @@ export async function GET(
         phone: conversation.customerPhone || undefined,
         address: conversation.customerAddress || undefined,
         platform: "instagram",
-        cached: true,
+        cached: false,
         cachedAt: new Date().toISOString(),
       };
       
-      // Cache the profile
-      await db.conversation.update({
-        where: { id: conversationId },
-        data: {
-          meta: {
-            ...((conversation.meta as any) || {}),
-            customerProfile: instagramProfile,
-          },
-        },
-      });
-      
       return NextResponse.json({
-        profile: instagramProfile,
+        profile: defaultProfile,
         source: "default",
       });
     }
     
-    // Facebook profile fetching
+    // Facebook profile fetching - always fetch fresh to avoid expired photo URLs
     try {
       // Decrypt page access token
       const pageAccessToken = await decrypt(
         conversation.pageConnection!.pageAccessTokenEnc
       );
 
-      // Fetch user profile from Facebook
+      // Always fetch fresh profile from Facebook API
+      console.log(`🔄 Fetching fresh Facebook profile for customer ${conversation.psid}`);
+      
       const profile = await facebookAPI.getUserProfile(
         conversation.psid,
         pageAccessToken,
         ["first_name", "last_name", "profile_pic", "locale"]
       );
 
-      // Enhanced profile data
+      console.log(`✅ Fresh Facebook profile fetched: ${profile.first_name} ${profile.last_name}`);
+
+      // Enhanced profile data with fresh photo URL
       const enhancedProfile = {
         id: conversation.psid,
         firstName: profile.first_name || "Unknown",
@@ -255,11 +306,11 @@ export async function GET(
         profilePicture: profile.profile_pic || null,
         locale: profile.locale || "en_US",
         facebookUrl: `https://www.facebook.com/${conversation.psid}`,
-        cached: true,
+        cached: false, // Mark as not cached since we always fetch fresh
         cachedAt: new Date().toISOString(),
       };
 
-      // Cache the profile data in conversation metadata
+      // Update conversation metadata with fresh profile (without caching)
       await db.conversation.update({
         where: { id: conversationId },
         data: {
@@ -269,9 +320,10 @@ export async function GET(
           },
         },
       });
+      
       return NextResponse.json({
         profile: enhancedProfile,
-        source: "facebook_api",
+        source: "facebook_api_fresh",
       });
     } catch (facebookError) {
       console.error("Facebook API error:", facebookError);
