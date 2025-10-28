@@ -198,13 +198,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Get agent's photo URL
-    const agent = await db.user.findUnique({
-      where: { id: session.user.id },
-      select: { photoUrl: true },
-    });
-
-    // Create agent message
+    // Create agent message with profile information
     const message = await db.message.create({
       data: {
         conversationId,
@@ -212,8 +206,8 @@ export async function POST(request: NextRequest) {
         text: text?.trim() || "",
         meta: {
           agentId: session.user.id,
-          agentName: session.user.name,
-          agentPhoto: agent?.photoUrl || null,
+          agentName: session.user.name || session.user.email || "Agent",
+          agentPhoto: session.user.image || null,
           sentAt: new Date().toISOString(),
           ...(imageMetadata && { image: imageMetadata }),
         },

@@ -98,6 +98,7 @@ export const authOptions: NextAuthOptions = {
           token.role = dbUser.role;
           token.companyId = dbUser.companyId;
           token.companyName = dbUser.company?.name;
+          token.name = dbUser.name; // Add user name to token
           token.picture = dbUser.photoUrl; // Add photo URL to token
         }
       }
@@ -109,6 +110,7 @@ export const authOptions: NextAuthOptions = {
         session.user.role = token.role;
         session.user.companyId = token.companyId;
         session.user.companyName = token.companyName;
+        session.user.name = token.name as string | null; // Add user name to session
         session.user.image = token.picture as string | null; // Add photo URL to session
       }
       return session;
