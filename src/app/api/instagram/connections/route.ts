@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
         accountType: true,
         createdAt: true,
         updatedAt: true,
-        // Don't include accessTokenEnc for security
+        accessTokenEnc: true, // Need this to fetch fresh profile
       },
       orderBy: {
         createdAt: 'desc',
@@ -68,23 +68,56 @@ export async function GET(request: NextRequest) {
 
     console.log(`📊 Found ${instagramConnections.length} Instagram connections`);
     
-    // Format connections for frontend (similar to PageConnection structure)
-    const formattedConnections = instagramConnections.map(conn => ({
-      id: conn.id,
-      instagramUserId: conn.instagramUserId,
-      username: conn.username,
-      displayName: conn.displayName,
-      profileData: conn.profileData,
-      mediaCount: conn.mediaCount,
-      conversationsCount: conn.conversationsCount,
-      messagingEnabled: conn.messagingEnabled,
-      profilePictureUrl: conn.profilePictureUrl,
-      accountType: conn.accountType,
-      createdAt: conn.createdAt,
-      updatedAt: conn.updatedAt,
-      // Add webhookConnected for frontend compatibility (Instagram doesn't use webhooks the same way)
-      webhookConnected: conn.messagingEnabled
-    }));
+    // Always fetch fresh profile pictures from Instagram API to avoid expired URLs
+    const { decrypt } = await import("@/lib/encryption");
+    const formattedConnectionsPromises = instagramConnections.map(async (conn) => {
+      let freshProfilePictureUrl = conn.profilePictureUrl;
+      
+      try {
+        // Fetch fresh profile data from Instagram API
+        const accessToken = await decrypt(conn.accessTokenEnc);
+        console.log(`🔄 Fetching fresh Instagram profile picture for @${conn.username}`);
+        
+        const response = await fetch(
+          `https://graph.instagram.com/me?fields=id,username,account_type,media_count,profile_picture_url&access_token=${accessToken}`
+        );
+        
+        if (response.ok) {
+          const freshData = await response.json();
+          freshProfilePictureUrl = freshData.profile_picture_url || conn.profilePictureUrl;
+          console.log(`✅ Fresh profile picture fetched for @${conn.username}`);
+          
+          // Update database with fresh URL (optional, but good for fallback)
+          await db.instagramConnection.update({
+            where: { id: conn.id },
+            data: { profilePictureUrl: freshProfilePictureUrl },
+          });
+        } else {
+          console.warn(`⚠️ Failed to fetch fresh profile for @${conn.username}, using cached URL`);
+        }
+      } catch (error) {
+        console.error(`❌ Error fetching fresh profile for @${conn.username}:`, error);
+        // Fall back to cached URL
+      }
+      
+      return {
+        id: conn.id,
+        instagramUserId: conn.instagramUserId,
+        username: conn.username,
+        displayName: conn.displayName,
+        profileData: conn.profileData,
+        mediaCount: conn.mediaCount,
+        conversationsCount: conn.conversationsCount,
+        messagingEnabled: conn.messagingEnabled,
+        profilePictureUrl: freshProfilePictureUrl, // Use fresh URL
+        accountType: conn.accountType,
+        createdAt: conn.createdAt,
+        updatedAt: conn.updatedAt,
+        webhookConnected: conn.messagingEnabled
+      };
+    });
+    
+    const formattedConnections = await Promise.all(formattedConnectionsPromises);
 
     return NextResponse.json({
       success: true,
