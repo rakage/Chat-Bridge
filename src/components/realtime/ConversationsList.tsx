@@ -69,6 +69,7 @@ export default function ConversationsList({
   const [newlyUnreadConversations, setNewlyUnreadConversations] = useState<Set<string>>(new Set());
   const [hasNewUnreadMessages, setHasNewUnreadMessages] = useState(false);
   const [lastSeenMap, setLastSeenMap] = useState<Map<string, Date>>(new Map());
+  const [profilePhotoErrors, setProfilePhotoErrors] = useState<Set<string>>(new Set());
   const initializedRef = useRef(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -592,6 +593,16 @@ export default function ConversationsList({
     }
   };
 
+  // Handle profile photo loading errors
+  const handleProfilePhotoError = (conversationId: string) => {
+    setProfilePhotoErrors((prev) => {
+      const updated = new Set(prev);
+      updated.add(conversationId);
+      return updated;
+    });
+    console.log(`📸 Profile photo failed to load for conversation ${conversationId}`);
+  };
+
   // Helper function to determine if a conversation is truly unread
   const isConversationUnread = (conversation: ConversationSummary) => {
     const lastMessageTime = new Date(conversation.lastMessageAt);
@@ -999,11 +1010,12 @@ export default function ConversationsList({
                 <div className="flex items-center space-x-2">
                   <div className="relative">
                     <div className="w-8 h-8">
-                      {conversation.customerProfile?.profilePicture ? (
+                      {conversation.customerProfile?.profilePicture && !profilePhotoErrors.has(conversation.id) ? (
                         <img
                           src={conversation.customerProfile.profilePicture}
                           alt={conversation.customerProfile.fullName}
                           className="w-8 h-8 rounded-full border-2 border-blue-500 object-cover"
+                          onError={() => handleProfilePhotoError(conversation.id)}
                         />
                       ) : (
                         <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center border-2 border-blue-500">

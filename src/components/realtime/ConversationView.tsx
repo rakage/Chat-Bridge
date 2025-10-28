@@ -125,6 +125,7 @@ export default function ConversationView({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [createTicketModalOpen, setCreateTicketModalOpen] = useState(false);
   const [isCustomerOnline, setIsCustomerOnline] = useState<boolean | null>(null);
+  const [profilePhotoError, setProfilePhotoError] = useState(false);
   
   // Image attachment states
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
@@ -264,6 +265,7 @@ export default function ConversationView({
     setOtherTyping([]);
     setLoading(!initialConversation);
     setProfileLoading(false);
+    setProfilePhotoError(false); // Reset profile photo error state
     setLoadingMore(false);
     setHasMore(true);
     setCursor(null);
@@ -520,6 +522,25 @@ export default function ConversationView({
         setLoadingMore(false);
       }
       isFetchingRef.current = false;
+    }
+  };
+
+  // Function to refresh profile when image fails to load
+  const handleProfilePhotoError = async () => {
+    if (profilePhotoError) return; // Prevent infinite loop
+    
+    console.log("📸 Profile photo failed to load, refreshing profile data...");
+    setProfilePhotoError(true);
+    
+    try {
+      const response = await fetch(`/api/conversations/${conversationId}/customer-profile?force=true`);
+      if (response.ok) {
+        const data = await response.json();
+        setCustomerProfile(data.profile);
+        console.log("✅ Profile data refreshed successfully");
+      }
+    } catch (err) {
+      console.error("❌ Failed to refresh profile:", err);
     }
   };
 
@@ -1043,11 +1064,12 @@ export default function ConversationView({
             <div className="flex items-center space-x-3">
               {/* Customer Profile Section */}
               <div className="flex items-center space-x-2">
-                {customerProfile?.profilePicture ? (
+                {customerProfile?.profilePicture && !profilePhotoError ? (
                   <img
                     src={customerProfile.profilePicture}
                     alt={customerProfile.fullName}
                     className="w-8 h-8 rounded-full border-2 border-blue-500"
+                    onError={handleProfilePhotoError}
                   />
                 ) : (
                   <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center border-2 border-blue-500">

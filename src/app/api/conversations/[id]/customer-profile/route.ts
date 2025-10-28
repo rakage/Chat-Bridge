@@ -17,6 +17,10 @@ export async function GET(
     }
 
     const { id: conversationId } = await params;
+    
+    // Check if force refresh is requested (e.g., when profile photo fails to load)
+    const searchParams = request.nextUrl.searchParams;
+    const forceRefresh = searchParams.get('force') === 'true';
 
     // Get conversation with page connection info
     const conversation = await db.conversation.findUnique({
@@ -62,9 +66,10 @@ export async function GET(
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
-    // Check if we have cached profile data
+    // Check if we have cached profile data (skip if force refresh)
     const cachedProfile = conversation.meta as any;
     if (
+      !forceRefresh &&
       cachedProfile?.customerProfile?.cached &&
       cachedProfile?.customerProfile?.cachedAt
     ) {
@@ -72,11 +77,16 @@ export async function GET(
         Date.now() - new Date(cachedProfile.customerProfile.cachedAt).getTime();
       // Cache for 24 hours
       if (cacheAge < 24 * 60 * 60 * 1000) {
+        console.log(`📦 Returning cached profile (age: ${Math.floor(cacheAge / 1000 / 60)} minutes)`);
         return NextResponse.json({
           profile: cachedProfile.customerProfile,
           source: "cache",
         });
       }
+    }
+    
+    if (forceRefresh) {
+      console.log(`🔄 Force refresh requested for conversation ${conversationId}`);
     }
 
     // For Widget, return customer info from conversation

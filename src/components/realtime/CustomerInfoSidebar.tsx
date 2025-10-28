@@ -76,6 +76,7 @@ export default function CustomerInfoSidebar({
   const [newTag, setNewTag] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [profilePhotoError, setProfilePhotoError] = useState(false);
 
   // Contact info state
   const [currentEmail, setCurrentEmail] = useState(customerEmail || "");
@@ -378,11 +379,15 @@ export default function CustomerInfoSidebar({
               {customerProfile ? (
                 <>
                   <div className="flex items-center space-x-3">
-                    {customerProfile.profilePicture ? (
+                    {customerProfile.profilePicture && !profilePhotoError ? (
                       <img
                         src={customerProfile.profilePicture}
                         alt={customerProfile.fullName}
                         className="w-12 h-12 rounded-full border-2 border-blue-500"
+                        onError={() => {
+                          console.log(`📸 Profile photo failed to load in sidebar`);
+                          setProfilePhotoError(true);
+                        }}
                       />
                     ) : (
                       <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center border-2 border-blue-500">
