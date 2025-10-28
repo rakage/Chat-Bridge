@@ -170,6 +170,34 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
+    // Instagram 24-hour messaging window check
+    // Note: We now automatically use HUMAN_AGENT tag for messages outside the window
+    if (conversation.platform === "INSTAGRAM") {
+      // Find the last message from the customer (USER role)
+      const lastCustomerMessage = await db.message.findFirst({
+        where: {
+          conversationId: conversation.id,
+          role: "USER",
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+        select: {
+          createdAt: true,
+        },
+      });
+
+      if (lastCustomerMessage) {
+        const hoursSinceLastMessage = (Date.now() - lastCustomerMessage.createdAt.getTime()) / (1000 * 60 * 60);
+        
+        if (hoursSinceLastMessage > 24) {
+          const hoursAgo = Math.floor(hoursSinceLastMessage);
+          console.log(`⏰ Instagram message outside 24-hour window (${hoursAgo}h ago), will use HUMAN_AGENT tag`);
+          // Continue sending - the queue worker will add HUMAN_AGENT tag automatically
+        }
+      }
+    }
+
     // Get agent's photo URL
     const agent = await db.user.findUnique({
       where: { id: session.user.id },
@@ -432,6 +460,35 @@ export async function POST(request: NextRequest) {
             });
           } else {
             const errorText = await igResponse.text();
+            
+            // Parse error for better handling
+            try {
+              const errorData = JSON.parse(errorText);
+              const errorCode = errorData.error?.code;
+              const errorSubcode = errorData.error?.error_subcode;
+              
+              // Handle 24-hour messaging window error specifically
+              if (errorCode === 10 && errorSubcode === 2534022) {
+                console.error(`❌ Instagram 24-hour window error (fallback):`, errorData.error.message);
+                
+                // Update message metadata to mark as failed
+                await db.message.update({
+                  where: { id: message.id },
+                  data: {
+                    meta: {
+                      ...(message.meta && typeof message.meta === 'object' ? message.meta : {}),
+                      failed: true,
+                      failedAt: new Date().toISOString(),
+                      failureReason: '24-hour messaging window expired',
+                      errorCode: errorSubcode,
+                    },
+                  },
+                });
+              }
+            } catch (parseError) {
+              // If parsing fails, just log the original error
+            }
+            
             console.error(`❌ Direct Instagram API error:`, errorText);
           }
         } else if (!isInstagram && conversation.pageConnection) {

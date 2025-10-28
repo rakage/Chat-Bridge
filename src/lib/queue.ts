@@ -915,11 +915,33 @@ export async function initializeWorkers() {
               // Build message payload according to Instagram API documentation
               // https://developers.facebook.com/docs/instagram-platform/instagram-api-with-instagram-login/send-messages
               
+              // Check if message needs tag (outside 24-hour window)
+              const lastCustomerMessage = await db.message.findFirst({
+                where: {
+                  conversationId: msg.conversationId,
+                  role: "USER",
+                },
+                orderBy: { createdAt: "desc" },
+                select: { createdAt: true },
+              });
+
+              const hoursSinceLastMessage = lastCustomerMessage 
+                ? (Date.now() - lastCustomerMessage.createdAt.getTime()) / (1000 * 60 * 60)
+                : 999;
+
+              // Use HUMAN_AGENT tag if outside 24-hour window
+              const needsTag = hoursSinceLastMessage > 24;
+              const messageTag = needsTag ? 'HUMAN_AGENT' : undefined;
+              
+              if (needsTag) {
+                console.log(`⏰ Message outside 24-hour window (${Math.floor(hoursSinceLastMessage)}h ago), using HUMAN_AGENT tag`);
+              }
+              
               if (imageUrl) {
                 // Send image attachment (per Instagram API docs)
-                console.log(`🚀 Sending Instagram image to ${recipientId} via IG user ${instagramUserId}`);
+                console.log(`🚀 Sending Instagram image to ${recipientId} via IG user ${instagramUserId}${needsTag ? ' with HUMAN_AGENT tag' : ''}`);
                 
-                const imagePayload = {
+                const imagePayload: any = {
                   recipient: { id: recipientId },
                   message: {
                     attachment: {
@@ -930,6 +952,11 @@ export async function initializeWorkers() {
                     }
                   }
                 };
+                
+                // Add message tag if needed (outside 24-hour window)
+                if (messageTag) {
+                  imagePayload.tag = messageTag;
+                }
                 
                 const igImageResponse = await fetch(`https://graph.instagram.com/v24.0/${instagramUserId}/messages`, {
                   method: 'POST',
@@ -942,6 +969,38 @@ export async function initializeWorkers() {
 
                 if (!igImageResponse.ok) {
                   const errorText = await igImageResponse.text();
+                  
+                  // Parse error for better handling
+                  try {
+                    const errorData = JSON.parse(errorText);
+                    const errorCode = errorData.error?.code;
+                    const errorSubcode = errorData.error?.error_subcode;
+                    
+                    // Handle 24-hour messaging window error specifically
+                    if (errorCode === 10 && errorSubcode === 2534022) {
+                      console.error(`❌ Instagram 24-hour window error for message ${messageId}:`, errorData.error.message);
+                      console.error(`💡 Tip: Instagram only allows sending messages within 24 hours after customer's last message`);
+                      
+                      // Update message metadata to mark as failed
+                      await db.message.update({
+                        where: { id: messageId },
+                        data: {
+                          meta: {
+                            ...((msg.meta as any) || {}),
+                            failed: true,
+                            failedAt: new Date().toISOString(),
+                            failureReason: '24-hour messaging window expired',
+                            errorCode: errorSubcode,
+                          },
+                        },
+                      });
+                      
+                      throw new Error(`Instagram 24-hour window error: Message sent outside allowed window. Customer must message you first.`);
+                    }
+                  } catch (parseError) {
+                    // If parsing fails, throw original error
+                  }
+                  
                   throw new Error(`Instagram image API error: ${errorText}`);
                 }
 
@@ -1006,12 +1065,17 @@ export async function initializeWorkers() {
                 return { instagramMessageId: igImageResult.message_id };
               } else {
                 // Send text message only (per Instagram API docs)
-                console.log(`🚀 Sending Instagram text message to ${recipientId} via IG user ${instagramUserId}`);
+                console.log(`🚀 Sending Instagram text message to ${recipientId} via IG user ${instagramUserId}${needsTag ? ' with HUMAN_AGENT tag' : ''}`);
                 
-                const textPayload = {
+                const textPayload: any = {
                   recipient: { id: recipientId },
                   message: { text: messageText }
                 };
+                
+                // Add message tag if needed (outside 24-hour window)
+                if (messageTag) {
+                  textPayload.tag = messageTag;
+                }
                 
                 const igResponse = await fetch(`https://graph.instagram.com/v24.0/${instagramUserId}/messages`, {
                   method: 'POST',
@@ -1024,6 +1088,38 @@ export async function initializeWorkers() {
 
                 if (!igResponse.ok) {
                   const errorText = await igResponse.text();
+                  
+                  // Parse error for better handling
+                  try {
+                    const errorData = JSON.parse(errorText);
+                    const errorCode = errorData.error?.code;
+                    const errorSubcode = errorData.error?.error_subcode;
+                    
+                    // Handle 24-hour messaging window error specifically
+                    if (errorCode === 10 && errorSubcode === 2534022) {
+                      console.error(`❌ Instagram 24-hour window error for message ${messageId}:`, errorData.error.message);
+                      console.error(`💡 Tip: Instagram only allows sending messages within 24 hours after customer's last message`);
+                      
+                      // Update message metadata to mark as failed
+                      await db.message.update({
+                        where: { id: messageId },
+                        data: {
+                          meta: {
+                            ...((msg.meta as any) || {}),
+                            failed: true,
+                            failedAt: new Date().toISOString(),
+                            failureReason: '24-hour messaging window expired',
+                            errorCode: errorSubcode,
+                          },
+                        },
+                      });
+                      
+                      throw new Error(`Instagram 24-hour window error: Message sent outside allowed window. Customer must message you first.`);
+                    }
+                  } catch (parseError) {
+                    // If parsing fails, throw original error
+                  }
+                  
                   throw new Error(`Instagram API error: ${errorText}`);
                 }
 
