@@ -353,6 +353,9 @@ async function processTrainingAsync(
       });
     }
 
+    // Get company ID from first document to clear cache
+    const companyId = documents[0]?.companyId;
+
     // Mark training as completed
     await db.trainingSession.update({
       where: { id: sessionId },
@@ -368,6 +371,20 @@ async function processTrainingAsync(
         },
       },
     });
+
+    // CRITICAL: Clear RAG message cache after training new documents
+    // This ensures the bot uses the newly trained information instead of old cached responses
+    if (companyId) {
+      try {
+        const cacheCleared = await db.ragMessageCache.deleteMany({
+          where: { companyId },
+        });
+        console.log(`✅ Cleared ${cacheCleared.count} cached RAG responses after training`);
+      } catch (cacheError) {
+        console.error('⚠️ Failed to clear cache after training:', cacheError);
+        // Don't fail the training if cache clearing fails
+      }
+    }
 
     console.log(`Training session ${sessionId} completed successfully`);
   } catch (error) {

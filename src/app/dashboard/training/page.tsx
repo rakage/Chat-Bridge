@@ -293,6 +293,30 @@ export default function TrainingPage() {
     }
   };
 
+  // Clear cache
+  const handleClearCache = async () => {
+    setError("");
+    setSuccess("");
+
+    try {
+      const response = await fetch("/api/rag/clear-cache", {
+        method: "POST",
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to clear cache");
+      }
+
+      const data = await response.json();
+      setSuccess(`Successfully cleared ${data.clearedCount} cached response(s)`);
+      console.log(`✅ Cache cleared: ${data.clearedCount} items`);
+    } catch (error) {
+      console.error("Clear cache error:", error);
+      setError(error instanceof Error ? error.message : "Failed to clear cache");
+    }
+  };
+
   // Start training
   const handleStartTraining = async () => {
     if (selectedDocuments.length === 0) {
@@ -320,7 +344,7 @@ export default function TrainingPage() {
         throw new Error(errorData.error || "Training failed");
       }
 
-      setSuccess("Training started successfully!");
+      setSuccess("Training started successfully! Cache will be cleared automatically.");
       setSelectedDocuments([]);
       loadData(true); // Force reload after training start
 
@@ -667,6 +691,20 @@ export default function TrainingPage() {
                     </>
                   )}
                 </Button>
+
+                {/* Clear Cache Button */}
+                <Button
+                  onClick={handleClearCache}
+                  variant="outline"
+                  className="w-full mt-2"
+                  size="sm"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Clear Response Cache
+                </Button>
+                <p className="text-xs text-gray-500 mt-1">
+                  Clear cached responses to force bot to use newly trained documents
+                </p>
               </div>
             </CardContent>
           </Card>

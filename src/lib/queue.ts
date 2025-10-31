@@ -1993,6 +1993,23 @@ export async function processInstagramMessageDirect(data: {
           );
           console.log(`📡 [Instagram] Emitted bot message events to dev-company room`);
         }
+
+        // ============================================
+        // CRITICAL FIX: Send the message back to Instagram customer
+        // ============================================
+        try {
+          const outgoingQueue = await getOutgoingMessageQueue();
+          await outgoingQueue.add("send-message", {
+            pageId: conversation.psid, // Not used for Instagram, but required by interface
+            recipientId: conversation.psid,
+            messageText: botResponse.response,
+            messageId: botMessage.id,
+          });
+          console.log(`✅ Queued Instagram bot response to customer ${conversation.psid}`);
+        } catch (sendError) {
+          console.error("❌ Failed to queue Instagram message for sending:", sendError);
+          // Don't throw - message is saved, just not sent
+        }
       }
     }
   } catch (error) {
