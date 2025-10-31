@@ -389,10 +389,19 @@ export default function ConversationsList({
     // Handle new conversation event
     const handleConversationNew = (data: { conversation: any }) => {
       console.log("🆕 [ConversationsList] Received conversation:new event:", data);
+      console.log("🔍 [ConversationsList] Socket connected:", socket?.connected);
+      console.log("🔍 [ConversationsList] Current conversations count:", conversations.length);
       
       const newConversation = data.conversation;
       
+      if (!newConversation) {
+        console.error("❌ [ConversationsList] No conversation data in event");
+        return;
+      }
+      
       setConversations((prev) => {
+        console.log("🔍 [ConversationsList] Inside setConversations, prev length:", prev.length);
+        
         // Check if conversation already exists
         const exists = prev.some((conv) => conv.id === newConversation.id);
         if (exists) {
@@ -401,14 +410,29 @@ export default function ConversationsList({
         }
         
         console.log(`✅ [ConversationsList] Adding new conversation ${newConversation.id} to list`);
+        console.log(`📝 [ConversationsList] Conversation details:`, {
+          id: newConversation.id,
+          customerName: newConversation.customerName,
+          platform: newConversation.platform,
+          lastMessage: newConversation.lastMessage?.text,
+        });
         
         // Add new conversation at the top
         const updated = [newConversation, ...prev].sort(
           (a, b) => new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime()
         );
         
+        console.log(`✅ [ConversationsList] After adding, conversations count:`, updated.length);
         return updated;
       });
+
+      // Show browser notification if permission is granted
+      if ("Notification" in window && Notification.permission === "granted") {
+        new Notification("New Message", {
+          body: `${newConversation.customerName || 'A customer'} sent a message`,
+          icon: newConversation.customerProfile?.profilePicture || '/logo.png',
+        });
+      }
     };
 
     socket.on("conversation:new", handleConversationNew);
