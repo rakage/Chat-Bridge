@@ -147,7 +147,6 @@ export default function PrivacyPolicyPage() {
               <ul className="list-disc pl-6 mb-4 text-gray-700 space-y-2">
                 <li><strong>OpenAI:</strong> Processes message text to generate AI responses. Data is NOT used for training models (API tier).</li>
                 <li><strong>Google Gemini:</strong> Alternative AI provider for response generation. Data is NOT used for training models.</li>
-                <li><strong>OpenRouter:</strong> LLM aggregation service providing access to multiple AI models.</li>
               </ul>
 
               <div className="bg-yellow-50 border-l-4 border-yellow-500 p-4 mb-4">

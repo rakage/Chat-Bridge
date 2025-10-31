@@ -84,18 +84,18 @@ export default function Header() {
 
   return (
     <header className="h-14 border-b border-gray-200 bg-white relative z-50 flex shrink-0 items-center gap-2">
-      <div className="flex items-center gap-2 px-4 flex-1">
-        <SidebarTrigger className="-ml-1" />
-        <Separator orientation="vertical" className="mr-2 h-4" />
-        <div className="flex items-center gap-2">
-          <div className="relative">
+      <div className="flex items-center gap-2 px-2 sm:px-4 flex-1 min-w-0">
+        <SidebarTrigger className="-ml-1 flex-shrink-0" />
+        <Separator orientation="vertical" className="mr-2 h-4 hidden sm:block" />
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          <div className="relative flex-shrink-0">
             <button
               onClick={() => setShowDropdown(!showDropdown)}
-              className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 cursor-pointer"
+              className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm text-gray-600 hover:text-gray-900 cursor-pointer"
             >
-              <span>{companyName}</span>
+              <span className="truncate max-w-[120px] sm:max-w-none">{companyName}</span>
               <ChevronDown
-                className={`w-4 h-4 transition-transform duration-200 ${
+                className={`w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0 transition-transform duration-200 ${
                   showDropdown ? "rotate-180" : ""
                 }`}
               />
@@ -158,8 +158,8 @@ export default function Header() {
               </>
             )}
           </div>
-          <Separator orientation="vertical" className="mx-2 h-4" />
-          <div className="flex items-center gap-2 text-sm">
+          <Separator orientation="vertical" className="mx-2 h-4 hidden md:block" />
+          <div className="hidden md:flex items-center gap-2 text-sm">
             {breadcrumbs.map((crumb, index) => (
               <div key={index} className="flex items-center gap-2">
                 {index > 0 && <Slash className="h-4 w-4 text-gray-400" />}
@@ -171,7 +171,7 @@ export default function Header() {
           </div>
         </div>
       </div>
-      <div className="flex items-center gap-4 px-4">
+      <div className="flex items-center gap-2 sm:gap-4 px-2 sm:px-4 flex-shrink-0">
           <div className="relative">
             <button
               onClick={() => setShowUserMenu(!showUserMenu)}

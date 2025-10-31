@@ -1768,14 +1768,29 @@ export async function processInstagramMessageDirect(data: {
       data: { lastMessageAt: new Date() },
     });
 
-    const fullMessage = await db.message.findUnique({
-      where: { id: message.id },
-      include: {
-        conversation: true,
-      },
-    });
+    // ============================================
+    // CRITICAL FIX: Emit socket events regardless of fetch success
+    // This ensures realtime updates work even if there are errors
+    // ============================================
+    try {
+      // Prepare message event data using the message we just created
+      const messageEvent = {
+        message: {
+          id: message.id,
+          text: message.text,
+          role: message.role,
+          createdAt: message.createdAt.toISOString(),
+          meta: message.meta,
+        },
+        conversation: {
+          id: conversation.id,
+          psid: conversation.psid,
+          status: conversation.status,
+          autoBot: conversation.autoBot,
+          platform: "INSTAGRAM" as const,
+        },
+      };
 
-    if (fullMessage) {
       // If this is a new conversation, emit conversation:new event with the first message
       if (isNewConversation && customerProfile) {
         console.log(`📤 Emitting conversation:new event for Instagram conversation ${conversation.id}`);
@@ -1790,12 +1805,12 @@ export async function processInstagramMessageDirect(data: {
             lastMessageAt: new Date().toISOString(),
             messageCount: 1,
             unreadCount: 1,
-            platform: "INSTAGRAM",
+            platform: "INSTAGRAM" as const,
             pageName: `@${instagramConnection.username}`,
             lastMessage: {
-              text: fullMessage.text,
-              role: fullMessage.role,
-              createdAt: fullMessage.createdAt.toISOString(),
+              text: message.text,
+              role: message.role,
+              createdAt: message.createdAt.toISOString(),
             },
           },
         };
@@ -1813,23 +1828,7 @@ export async function processInstagramMessageDirect(data: {
         }
       }
 
-      const messageEvent = {
-        message: {
-          id: fullMessage.id,
-          text: fullMessage.text,
-          role: fullMessage.role,
-          createdAt: fullMessage.createdAt.toISOString(),
-          meta: fullMessage.meta,
-        },
-        conversation: {
-          id: conversation.id,
-          psid: conversation.psid,
-          status: conversation.status,
-          autoBot: conversation.autoBot,
-          platform: "INSTAGRAM",
-        },
-      };
-
+      // Emit message:new event to conversation and company rooms
       socketService.emitToConversation(conversation.id, "message:new", messageEvent);
       socketService.emitToCompany(instagramConnection.companyId, "message:new", messageEvent);
 
@@ -1841,9 +1840,9 @@ export async function processInstagramMessageDirect(data: {
           conversationId: conversation.id,
           type: "new_message",
           message: {
-            text: fullMessage.text,
-            role: fullMessage.role,
-            createdAt: fullMessage.createdAt.toISOString(),
+            text: message.text,
+            role: message.role,
+            createdAt: message.createdAt.toISOString(),
           },
           lastMessageAt: new Date().toISOString(),
           timestamp: new Date().toISOString(),
@@ -1860,9 +1859,9 @@ export async function processInstagramMessageDirect(data: {
             conversationId: conversation.id,
             type: "new_message",
             message: {
-              text: fullMessage.text,
-              role: fullMessage.role,
-              createdAt: fullMessage.createdAt.toISOString(),
+              text: message.text,
+              role: message.role,
+              createdAt: message.createdAt.toISOString(),
             },
             lastMessageAt: new Date().toISOString(),
             timestamp: new Date().toISOString(),
@@ -1870,6 +1869,9 @@ export async function processInstagramMessageDirect(data: {
         );
         console.log(`📡 [Instagram] Emitted message events to dev-company room`);
       }
+    } catch (socketError) {
+      console.error("❌ Failed to emit Instagram message socket events:", socketError);
+      // Don't throw - continue processing even if socket emissions fail
     }
 
     if (conversation.autoBot) {

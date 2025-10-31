@@ -48,7 +48,7 @@ export default function DashboardLayout({
               backgroundSize: "18px 18px",
             }}
           >
-            <div className="container mx-auto px-6 py-8">{children}</div>
+            <div className="container mx-auto px-4 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-8">{children}</div>
           </main>
         </SidebarInset>
       </SidebarProvider>

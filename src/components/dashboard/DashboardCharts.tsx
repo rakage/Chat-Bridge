@@ -103,8 +103,8 @@ const hourlyChartConfig = {
 } satisfies ChartConfig;
 
 const LoadingChart = memo(() => (
-  <div className="h-[400px] flex items-center justify-center">
-    <div className="animate-pulse text-muted-foreground">Loading chart...</div>
+  <div className="h-[250px] sm:h-[300px] lg:h-[400px] flex items-center justify-center">
+    <div className="animate-pulse text-muted-foreground text-xs sm:text-sm">Loading chart...</div>
   </div>
 ));
 
@@ -121,14 +121,16 @@ const ConversationTrendsChart = memo(
   }> }) => (
     <ChartContainer
       config={conversationChartConfig}
-      className="h-[400px] w-full"
+      className="h-[250px] sm:h-[300px] lg:h-[400px] w-full"
     >
       <LineChart
         accessibilityLayer
         data={data}
         margin={{
-          left: 12,
-          right: 12,
+          left: 4,
+          right: 4,
+          top: 4,
+          bottom: 4,
         }}
       >
         <CartesianGrid vertical={false} />
@@ -138,8 +140,9 @@ const ConversationTrendsChart = memo(
           axisLine={false}
           tickMargin={8}
           tickFormatter={(value) => value.slice(0, 6)} // Show "Jan 1" format
+          tick={{ fontSize: 12 }}
         />
-        <YAxis tickLine={false} axisLine={false} tickMargin={8} />
+        <YAxis tickLine={false} axisLine={false} tickMargin={8} tick={{ fontSize: 12 }} />
         <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
         <Line
           dataKey="facebook"
@@ -188,23 +191,24 @@ const MessageActivityChart = memo(
       total: number;
     }>;
   }) => (
-    <ChartContainer config={messageChartConfig} className="h-[300px]">
-      <LineChart data={data}>
+    <ChartContainer config={messageChartConfig} className="h-[250px] sm:h-[300px]">
+      <LineChart data={data} margin={{ left: 4, right: 4, top: 4, bottom: 4 }}>
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis
           dataKey="date"
           tickLine={false}
           axisLine={false}
           tickMargin={8}
+          tick={{ fontSize: 11 }}
         />
-        <YAxis tickLine={false} axisLine={false} tickMargin={8} />
+        <YAxis tickLine={false} axisLine={false} tickMargin={8} tick={{ fontSize: 11 }} />
         <ChartTooltip content={<ChartTooltipContent />} />
         <Line
           type="monotone"
           dataKey="userMessages"
           stroke="var(--color-userMessages)"
           strokeWidth={2}
-          dot={{ r: 3 }}
+          dot={{ r: 2 }}
           isAnimationActive={false}
         />
         <Line
@@ -212,7 +216,7 @@ const MessageActivityChart = memo(
           dataKey="botMessages"
           stroke="var(--color-botMessages)"
           strokeWidth={2}
-          dot={{ r: 3 }}
+          dot={{ r: 2 }}
           isAnimationActive={false}
         />
         <Line
@@ -220,7 +224,7 @@ const MessageActivityChart = memo(
           dataKey="agentMessages"
           stroke="var(--color-agentMessages)"
           strokeWidth={2}
-          dot={{ r: 3 }}
+          dot={{ r: 2 }}
           isAnimationActive={false}
         />
       </LineChart>
@@ -236,23 +240,24 @@ const HourlyActivityChart = memo(
   }: {
     data: Array<{ hour: string; messages: number; conversations: number }>;
   }) => (
-    <ChartContainer config={hourlyChartConfig} className="h-[300px]">
-      <LineChart data={data}>
+    <ChartContainer config={hourlyChartConfig} className="h-[250px] sm:h-[300px]">
+      <LineChart data={data} margin={{ left: 4, right: 4, top: 4, bottom: 4 }}>
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis
           dataKey="hour"
           tickLine={false}
           axisLine={false}
           tickMargin={8}
+          tick={{ fontSize: 11 }}
         />
-        <YAxis tickLine={false} axisLine={false} tickMargin={8} />
+        <YAxis tickLine={false} axisLine={false} tickMargin={8} tick={{ fontSize: 11 }} />
         <ChartTooltip content={<ChartTooltipContent />} />
         <Line
           type="monotone"
           dataKey="messages"
           stroke="var(--color-messages)"
           strokeWidth={2}
-          dot={{ r: 3 }}
+          dot={{ r: 2 }}
           isAnimationActive={false}
         />
         <Line
@@ -260,7 +265,7 @@ const HourlyActivityChart = memo(
           dataKey="conversations"
           stroke="var(--color-conversations)"
           strokeWidth={2}
-          dot={{ r: 3 }}
+          dot={{ r: 2 }}
           isAnimationActive={false}
         />
       </LineChart>
@@ -273,12 +278,12 @@ HourlyActivityChart.displayName = "HourlyActivityChart";
 const DashboardCharts = memo(
   ({ chartData, chartsLoading }: DashboardChartsProps) => {
     return (
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         {/* Conversation Trends Chart - Full Width */}
         <Card className="w-full" key="conversation-trends">
           <CardHeader>
-            <CardTitle>Conversation Trends</CardTitle>
-            <CardDescription>
+            <CardTitle className="text-base sm:text-lg">Conversation Trends</CardTitle>
+            <CardDescription className="text-xs sm:text-sm">
               Daily conversation volume by platform over the last 30 days
             </CardDescription>
           </CardHeader>
@@ -295,18 +300,18 @@ const DashboardCharts = memo(
         </Card>
 
         {/* Message Trends Chart */}
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-2">
           <Card key="message-activity">
             <CardHeader>
-              <CardTitle>Message Activity</CardTitle>
-              <CardDescription>
+              <CardTitle className="text-base sm:text-lg">Message Activity</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">
                 Message breakdown by sender type (30 days)
               </CardDescription>
             </CardHeader>
             <CardContent>
               {chartsLoading ? (
-                <div className="h-[300px] flex items-center justify-center">
-                  <div className="animate-pulse text-muted-foreground">
+                <div className="h-[250px] sm:h-[300px] flex items-center justify-center">
+                  <div className="animate-pulse text-muted-foreground text-xs sm:text-sm">
                     Loading chart...
                   </div>
                 </div>
@@ -322,15 +327,15 @@ const DashboardCharts = memo(
           {/* Today's Hourly Activity */}
           <Card key="hourly-activity">
             <CardHeader>
-              <CardTitle>Today&apos;s Activity</CardTitle>
-              <CardDescription>
+              <CardTitle className="text-base sm:text-lg">Today&apos;s Activity</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">
                 Hourly message and conversation activity
               </CardDescription>
             </CardHeader>
             <CardContent>
               {chartsLoading ? (
-                <div className="h-[300px] flex items-center justify-center">
-                  <div className="animate-pulse text-muted-foreground">
+                <div className="h-[250px] sm:h-[300px] flex items-center justify-center">
+                  <div className="animate-pulse text-muted-foreground text-xs sm:text-sm">
                     Loading chart...
                   </div>
                 </div>

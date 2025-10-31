@@ -191,14 +191,14 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         {/* Welcome message skeleton */}
         <div className="flex justify-end items-center">
-          <Skeleton className="h-4 w-48" />
+          <Skeleton className="h-3 sm:h-4 w-32 sm:w-48" />
         </div>
 
         {/* First row - 4 stat cards */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {[...Array(4)].map((_, i) => (
             <Card key={i}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -214,7 +214,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Second row - 3 stat cards */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {[...Array(3)].map((_, i) => (
             <Card key={i}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -230,7 +230,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Charts skeleton */}
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-2">
           <Card>
             <CardHeader>
               <Skeleton className="h-5 w-40 mb-2" />
@@ -264,26 +264,26 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div className="flex justify-end items-center">
-        <div className="text-sm text-gray-500">
+        <div className="text-xs sm:text-sm text-gray-500 truncate">
           Welcome back, {session?.user?.name || session?.user?.email}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
+            <CardTitle className="text-xs sm:text-sm font-medium">
               Total Conversations
             </CardTitle>
             <MessageSquare className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-xl sm:text-2xl font-bold">
               {stats.totalConversations.toLocaleString()}
             </div>
-            <div className="flex items-center text-xs text-muted-foreground">
+            <div className="flex items-center text-[10px] sm:text-xs text-muted-foreground">
               {stats.conversationGrowth > 0 ? (
                 <ArrowUpRight className="h-3 w-3 text-green-500 mr-1" />
               ) : (
@@ -296,29 +296,29 @@ export default function DashboardPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Now</CardTitle>
+            <CardTitle className="text-xs sm:text-sm font-medium">Active Now</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-xl sm:text-2xl font-bold">
               {stats.activeConversations.toLocaleString()}
             </div>
-            <p className="text-xs text-muted-foreground">Currently ongoing</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">Currently ongoing</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
+            <CardTitle className="text-xs sm:text-sm font-medium">
               Total Messages
             </CardTitle>
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-xl sm:text-2xl font-bold">
               {stats.totalMessages.toLocaleString()}
             </div>
-            <div className="flex items-center text-xs text-muted-foreground">
+            <div className="flex items-center text-[10px] sm:text-xs text-muted-foreground">
               {stats.messageGrowth > 0 ? (
                 <ArrowUpRight className="h-3 w-3 text-green-500 mr-1" />
               ) : (
@@ -331,44 +331,44 @@ export default function DashboardPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
+            <CardTitle className="text-xs sm:text-sm font-medium">
               Automation Rate
             </CardTitle>
             <Bot className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.automationRate}%</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-xl sm:text-2xl font-bold">{stats.automationRate}%</div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">
               {stats.botMessages.toLocaleString()} bot responses
             </p>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
+            <CardTitle className="text-xs sm:text-sm font-medium">
               Avg Response Time
             </CardTitle>
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.avgResponseTime}</div>
-            <p className="text-xs text-muted-foreground">Target: &lt;5s</p>
+            <div className="text-xl sm:text-2xl font-bold">{stats.avgResponseTime}</div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">Target: &lt;5s</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
+            <CardTitle className="text-xs sm:text-sm font-medium">
               Satisfaction Rate
             </CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.satisfactionRate}/5</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-xl sm:text-2xl font-bold">{stats.satisfactionRate}/5</div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">
               Based on user feedback
             </p>
           </CardContent>
@@ -376,16 +376,16 @@ export default function DashboardPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">LLM Provider</CardTitle>
+            <CardTitle className="text-xs sm:text-sm font-medium">LLM Provider</CardTitle>
             <BarChart3 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-xl sm:text-2xl font-bold">
               {stats.providerStats.length > 0
                 ? stats.providerStats[0].provider
                 : "None"}
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-[10px] sm:text-xs text-muted-foreground">
               {stats.providerStats
                 .reduce((sum, p) => sum + p.count, 0)
                 .toLocaleString()}{" "}

@@ -405,7 +405,6 @@ enum Role {
 enum Provider {
   OPENAI
   GEMINI
-  OPENROUTER
 }
 
 enum ConvStatus {

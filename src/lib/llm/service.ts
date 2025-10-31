@@ -2,7 +2,6 @@ import { LLMProvider, LLMRequest, LLMResponse, ProviderConfig } from "./types";
 import { Provider } from "@prisma/client";
 import { OpenAIProvider } from "./providers/openai";
 import { GeminiProvider } from "./providers/gemini";
-import { OpenRouterProvider } from "./providers/openrouter";
 import { decrypt } from "../encryption";
 
 class LLMService {
@@ -14,8 +13,6 @@ class LLMService {
         return new OpenAIProvider(apiKey);
       case "GEMINI":
         return new GeminiProvider(apiKey);
-      case "OPENROUTER":
-        return new OpenRouterProvider(apiKey);
       default:
         throw new Error(`Unsupported provider: ${provider}`);
     }
@@ -123,16 +120,6 @@ class LLMService {
         ];
       case Provider.GEMINI:
         return ["gemini-1.5-pro", "gemini-1.5-flash", "gemini-1.0-pro"];
-      case Provider.OPENROUTER:
-        return [
-          "anthropic/claude-3.5-sonnet",
-          "anthropic/claude-3-haiku",
-          "meta-llama/llama-3.1-8b-instruct",
-          "openai/gpt-4o",
-          "openai/gpt-4o-mini",
-          "google/gemini-2.5-flash-image-preview:free",
-          "deepseek/deepseek-chat-v3.1:free",
-        ];
       default:
         return [];
     }

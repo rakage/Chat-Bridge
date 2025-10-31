@@ -35,6 +35,7 @@ import {
   Zap,
   Trash2,
 } from "lucide-react";
+import { OpenAI, Gemini } from "@lobehub/icons";
 
 export default function LLMConfigPage() {
   const { data: session, status: sessionStatus } = useSession();
@@ -309,13 +310,11 @@ export default function LLMConfigPage() {
   const getProviderIcon = (provider: string) => {
     switch (provider) {
       case "OPENAI":
-        return "🤖";
+        return <OpenAI size={24} />;
       case "GEMINI":
-        return "✨";
-      case "OPENROUTER":
-        return "🚀";
+        return <Gemini.Color size={24} />;
       default:
-        return "🤖";
+        return <OpenAI size={24} />;
     }
   };
 
@@ -325,8 +324,6 @@ export default function LLMConfigPage() {
         return ["gpt-4", "gpt-4-turbo", "gpt-3.5-turbo", "gpt-3.5-turbo-16k"];
       case "GEMINI":
         return ["gemini-1.5-pro", "gemini-1.5-flash", "gemini-pro"];
-      case "OPENROUTER":
-        return []; // OpenRouter uses text input instead of dropdown
       default:
         return [];
     }
@@ -338,8 +335,6 @@ export default function LLMConfigPage() {
         return "gpt-3.5-turbo";
       case "GEMINI":
         return "gemini-1.5-flash";
-      case "OPENROUTER":
-        return "openai/gpt-3.5-turbo";
       default:
         return "";
     }
@@ -497,7 +492,7 @@ export default function LLMConfigPage() {
                     id="provider-selection"
                     className="grid grid-cols-1 md:grid-cols-3 gap-3"
                   >
-                    {["OPENAI", "GEMINI", "OPENROUTER"].map((provider) => (
+                    {["OPENAI", "GEMINI"].map((provider) => (
                       <label
                         key={provider}
                         className={`relative cursor-pointer rounded-lg border p-4 hover:bg-gray-50 ${
@@ -524,19 +519,17 @@ export default function LLMConfigPage() {
 
                         <span className="sr-only">
                           Select {provider === "OPENAI" && "OpenAI"}
-                          {provider === "GEMINI" && "Google Gemini"}
-                          {provider === "OPENROUTER" && "OpenRouter"} as AI
+                          {provider === "GEMINI" && "Google Gemini"} as AI
                           provider
                         </span>
                         <div className="flex items-center space-x-3">
-                          <span className="text-2xl">
+                          <div className="flex items-center justify-center">
                             {getProviderIcon(provider)}
-                          </span>
+                          </div>
                           <div>
                             <h3 className="font-medium text-gray-900">
                               {provider === "OPENAI" && "OpenAI"}
                               {provider === "GEMINI" && "Google Gemini"}
-                              {provider === "OPENROUTER" && "OpenRouter"}
                             </h3>
                             <p
                               className="text-sm text-gray-500"
@@ -544,8 +537,6 @@ export default function LLMConfigPage() {
                             >
                               {provider === "OPENAI" && "GPT models"}
                               {provider === "GEMINI" && "Gemini Pro/Flash"}
-                              {provider === "OPENROUTER" &&
-                                "Multiple providers"}
                             </p>
                           </div>
                         </div>
@@ -582,48 +573,26 @@ export default function LLMConfigPage() {
               {/* Model Selection */}
               <div className="space-y-2">
                 <Label htmlFor="model">Model</Label>
-                {llmSettings.provider === "OPENROUTER" ? (
-                  <Input
-                    id="model"
-                    type="text"
-                    value={llmSettings.model}
-                    onChange={(e) =>
-                      setLlmSettings((prev) => ({
-                        ...prev,
-                        model: e.target.value,
-                      }))
-                    }
-                    placeholder="e.g., openai/gpt-4, anthropic/claude-3-sonnet"
-                    className="w-full"
-                  />
-                ) : (
-                  <Select
-                    value={llmSettings.model}
-                    onValueChange={(value) =>
-                      setLlmSettings((prev) => ({
-                        ...prev,
-                        model: value,
-                      }))
-                    }
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select a model" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {getModelOptions(llmSettings.provider).map((model) => (
-                        <SelectItem key={model} value={model}>
-                          {model}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-                {llmSettings.provider === "OPENROUTER" && (
-                  <p className="text-xs text-muted-foreground">
-                    Enter the full model path (e.g., openai/gpt-4,
-                    anthropic/claude-3-sonnet)
-                  </p>
-                )}
+                <Select
+                  value={llmSettings.model}
+                  onValueChange={(value) =>
+                    setLlmSettings((prev) => ({
+                      ...prev,
+                      model: value,
+                    }))
+                  }
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select a model" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {getModelOptions(llmSettings.provider).map((model) => (
+                      <SelectItem key={model} value={model}>
+                        {model}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* Model Parameters */}
@@ -738,10 +707,8 @@ export default function LLMConfigPage() {
                 <>
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-600">Provider:</span>
-                    <span className="text-sm font-medium flex items-center">
-                      <span className="mr-1">
-                        {getProviderIcon(currentConfig.provider)}
-                      </span>
+                    <span className="text-sm font-medium flex items-center gap-2">
+                      {getProviderIcon(currentConfig.provider)}
                       {currentConfig.provider}
                     </span>
                   </div>
