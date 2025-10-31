@@ -111,26 +111,29 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Get company's OpenAI API key if they have OpenAI configured
-    let openaiApiKey: string | undefined;
+    // Get company's provider config for embeddings
+    let embeddingApiKey: string | undefined;
+    let embeddingProvider: "OPENAI" | "GEMINI" = "OPENAI";
+    
     try {
       const providerConfig = await db.providerConfig.findUnique({
         where: { companyId: user.companyId },
       });
 
-      if (providerConfig && providerConfig.provider === "OPENAI") {
+      if (providerConfig && providerConfig.apiKeyEnc) {
         const { decrypt } = await import("@/lib/encryption");
-        openaiApiKey = await decrypt(providerConfig.apiKeyEnc);
-        console.log(`🔑 Training: Using company's OpenAI API key for embeddings`);
+        embeddingApiKey = await decrypt(providerConfig.apiKeyEnc);
+        embeddingProvider = providerConfig.provider as "OPENAI" | "GEMINI";
+        console.log(`🔑 Training: Using company's ${providerConfig.provider} API key for embeddings`);
       } else {
-        console.log(`🔑 Training: Using global OpenAI API key for embeddings (company provider: ${providerConfig?.provider || 'none'})`);
+        console.log(`🔑 Training: No provider config, using environment OpenAI API key`);
       }
     } catch (error) {
-      console.log(`⚠️ Training: Could not retrieve company OpenAI key:`, error);
+      console.log(`⚠️ Training: Could not retrieve company API key:`, error);
     }
 
     // Start training process in background
-    processTrainingAsync(trainingSession.id, documents, settings, openaiApiKey).catch(
+    processTrainingAsync(trainingSession.id, documents, settings, embeddingApiKey, embeddingProvider).catch(
       (error) => {
         console.error("Error in training process:", error);
       }
@@ -159,7 +162,8 @@ async function processTrainingAsync(
   sessionId: string,
   documents: any[],
   settings: any,
-  openaiApiKey?: string
+  embeddingApiKey?: string,
+  embeddingProvider: "OPENAI" | "GEMINI" = "OPENAI"
 ) {
   try {
     // Update status to processing
@@ -225,11 +229,12 @@ async function processTrainingAsync(
       const batch = allDocumentChunks.slice(i, i + batchSize);
 
       try {
-        // Generate embeddings for this batch
+        // Generate embeddings for this batch using configured provider
         const texts = batch.map((chunk) => chunk.content);
         const embeddingResult = await EmbeddingService.generateEmbeddings(
           texts,
-          openaiApiKey
+          embeddingApiKey,
+          embeddingProvider
         );
 
         // Create vector documents

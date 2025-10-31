@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 export interface EmbeddingResult {
   embedding: number[];
@@ -11,10 +12,13 @@ export interface EmbeddingBatch {
   tokenCounts?: number[];
 }
 
+export type EmbeddingProvider = "OPENAI" | "GEMINI";
+
 export class EmbeddingService {
-  private static readonly MODEL_NAME = "text-embedding-3-small"; // OpenAI embedding model
-  private static readonly MAX_BATCH_SIZE = 100; // OpenAI supports up to 2048 inputs per request
-  private static readonly MAX_INPUT_LENGTH = 8191; // Max tokens per input for text-embedding-3-small
+  private static readonly OPENAI_MODEL = "text-embedding-3-small";
+  private static readonly GEMINI_EMBEDDING_MODEL = "text-embedding-004"; // Gemini embedding model
+  private static readonly MAX_BATCH_SIZE = 100;
+  private static readonly MAX_INPUT_LENGTH = 8191;
 
   /**
    * Get OpenAI client instance with provided or default API key
@@ -25,14 +29,28 @@ export class EmbeddingService {
   }
 
   /**
+   * Get Gemini client instance with provided API key
+   */
+  private static getGeminiClient(apiKey: string): GoogleGenerativeAI {
+    return new GoogleGenerativeAI(apiKey);
+  }
+
+  /**
    * Generate embedding for a single text input
    * @param text - The text to generate embedding for
-   * @param apiKey - Optional OpenAI API key (falls back to env variable)
+   * @param apiKey - API key for the provider
+   * @param provider - The embedding provider to use (OPENAI or GEMINI)
    */
   static async generateEmbedding(
     text: string,
-    apiKey?: string
+    apiKey?: string,
+    provider: EmbeddingProvider = "OPENAI"
   ): Promise<EmbeddingResult> {
+    if (provider === "GEMINI") {
+      return this.generateGeminiEmbedding(text, apiKey);
+    }
+    
+    // Default to OpenAI
     const effectiveKey = apiKey || process.env.OPENAI_API_KEY;
     if (!effectiveKey) {
       throw new Error("OpenAI API key is required (provide key or set OPENAI_API_KEY environment variable)");
@@ -44,7 +62,7 @@ export class EmbeddingService {
 
       const openai = this.getOpenAIClient(apiKey);
       const response = await openai.embeddings.create({
-        model: this.MODEL_NAME,
+        model: this.OPENAI_MODEL,
         input: truncatedText,
         encoding_format: "float",
       });
@@ -60,7 +78,7 @@ export class EmbeddingService {
     } catch (error) {
       console.error("OpenAI embedding error:", error);
       throw new Error(
-        `Failed to generate embedding: ${
+        `Failed to generate OpenAI embedding: ${
           error instanceof Error ? error.message : "Unknown error"
         }`
       );
@@ -68,18 +86,64 @@ export class EmbeddingService {
   }
 
   /**
-   * Generate embeddings for multiple text inputs (OpenAI supports batch requests)
+   * Generate embedding using Gemini
+   * @param text - The text to generate embedding for
+   * @param apiKey - Gemini API key
+   */
+  private static async generateGeminiEmbedding(
+    text: string,
+    apiKey?: string
+  ): Promise<EmbeddingResult> {
+    const effectiveKey = apiKey || process.env.GEMINI_API_KEY;
+    if (!effectiveKey) {
+      throw new Error("Gemini API key is required");
+    }
+
+    try {
+      const truncatedText = this.truncateText(text);
+      const genAI = this.getGeminiClient(effectiveKey);
+      const model = genAI.getGenerativeModel({ model: this.GEMINI_EMBEDDING_MODEL });
+
+      const result = await model.embedContent(truncatedText);
+      
+      if (!result.embedding || !result.embedding.values) {
+        throw new Error("No embedding returned from Gemini API");
+      }
+
+      return {
+        embedding: result.embedding.values,
+        tokenCount: this.estimateTokenCount(truncatedText),
+      };
+    } catch (error) {
+      console.error("Gemini embedding error:", error);
+      throw new Error(
+        `Failed to generate Gemini embedding: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
+    }
+  }
+
+  /**
+   * Generate embeddings for multiple text inputs
    * @param texts - Array of texts to generate embeddings for
-   * @param apiKey - Optional OpenAI API key (falls back to env variable)
+   * @param apiKey - API key for the provider
+   * @param provider - The embedding provider to use (OPENAI or GEMINI)
    */
   static async generateEmbeddings(
     texts: string[],
-    apiKey?: string
+    apiKey?: string,
+    provider: EmbeddingProvider = "OPENAI"
   ): Promise<EmbeddingBatch> {
     if (texts.length === 0) {
       return { inputs: [], embeddings: [] };
     }
 
+    if (provider === "GEMINI") {
+      return this.generateGeminiEmbeddings(texts, apiKey);
+    }
+
+    // Default to OpenAI
     const effectiveKey = apiKey || process.env.OPENAI_API_KEY;
     if (!effectiveKey) {
       throw new Error("OpenAI API key is required (provide key or set OPENAI_API_KEY environment variable)");
@@ -98,7 +162,7 @@ export class EmbeddingService {
 
       for (const batch of batches) {
         const response = await openai.embeddings.create({
-          model: this.MODEL_NAME,
+          model: this.OPENAI_MODEL,
           input: batch,
           encoding_format: "float",
         });
@@ -125,7 +189,56 @@ export class EmbeddingService {
     } catch (error) {
       console.error("OpenAI batch embedding error:", error);
       throw new Error(
-        `Failed to generate batch embeddings: ${
+        `Failed to generate OpenAI batch embeddings: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
+    }
+  }
+
+  /**
+   * Generate embeddings for multiple texts using Gemini (processes sequentially)
+   * @param texts - Array of texts to generate embeddings for
+   * @param apiKey - Gemini API key
+   */
+  private static async generateGeminiEmbeddings(
+    texts: string[],
+    apiKey?: string
+  ): Promise<EmbeddingBatch> {
+    const effectiveKey = apiKey || process.env.GEMINI_API_KEY;
+    if (!effectiveKey) {
+      throw new Error("Gemini API key is required");
+    }
+
+    try {
+      const truncatedTexts = texts.map(text => this.truncateText(text));
+      const genAI = this.getGeminiClient(effectiveKey);
+      const model = genAI.getGenerativeModel({ model: this.GEMINI_EMBEDDING_MODEL });
+
+      const allEmbeddings: number[][] = [];
+      const allTokenCounts: number[] = [];
+
+      // Gemini processes embeddings one at a time
+      for (const text of truncatedTexts) {
+        const result = await model.embedContent(text);
+        
+        if (!result.embedding || !result.embedding.values) {
+          throw new Error("No embedding returned from Gemini API");
+        }
+
+        allEmbeddings.push(result.embedding.values);
+        allTokenCounts.push(this.estimateTokenCount(text));
+      }
+
+      return {
+        inputs: texts,
+        embeddings: allEmbeddings,
+        tokenCounts: allTokenCounts,
+      };
+    } catch (error) {
+      console.error("Gemini batch embedding error:", error);
+      throw new Error(
+        `Failed to generate Gemini batch embeddings: ${
           error instanceof Error ? error.message : "Unknown error"
         }`
       );

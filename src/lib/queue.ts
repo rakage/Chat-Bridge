@@ -1571,11 +1571,29 @@ export async function processIncomingMessageDirect(
     if (conversation.autoBot) {
       console.log(`Auto-bot enabled for conversation ${conversation.id}`);
       try {
+        // Get provider configuration to use the correct LLM
+        const providerConfig = await db.providerConfig.findUnique({
+          where: { companyId: pageConnection.companyId },
+        });
+
+        if (!providerConfig || !providerConfig.apiKeyEnc) {
+          console.error(`❌ No LLM provider configured for company ${pageConnection.companyId}`);
+          throw new Error("LLM provider configuration is required for auto-bot");
+        }
+
+        console.log(`🤖 Facebook AutoBot: Using ${providerConfig.provider} for response generation`);
+
         // Generate bot response using RAG
         const botResponse = await RAGChatbot.generateResponse(
           messageText,
           pageConnection.companyId,
-          conversation.id
+          conversation.id,
+          {
+            providerConfig: providerConfig,
+            temperature: providerConfig.temperature,
+            maxTokens: providerConfig.maxTokens,
+            systemPrompt: providerConfig.systemPrompt,
+          }
         );
 
         if (botResponse.response) {
@@ -1875,10 +1893,28 @@ export async function processInstagramMessageDirect(data: {
     }
 
     if (conversation.autoBot) {
+      // Get provider configuration to use the correct LLM
+      const providerConfig = await db.providerConfig.findUnique({
+        where: { companyId: instagramConnection.companyId },
+      });
+
+      if (!providerConfig || !providerConfig.apiKeyEnc) {
+        console.error(`❌ No LLM provider configured for company ${instagramConnection.companyId}`);
+        throw new Error("LLM provider configuration is required for auto-bot");
+      }
+
+      console.log(`🤖 Instagram AutoBot: Using ${providerConfig.provider} for response generation`);
+
       const botResponse = await RAGChatbot.generateResponse(
         messageText,
         instagramConnection.companyId,
-        conversation.id
+        conversation.id,
+        {
+          providerConfig: providerConfig,
+          temperature: providerConfig.temperature,
+          maxTokens: providerConfig.maxTokens,
+          systemPrompt: providerConfig.systemPrompt,
+        }
       );
 
       if (botResponse.response) {

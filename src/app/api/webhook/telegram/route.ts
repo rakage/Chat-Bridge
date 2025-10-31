@@ -239,11 +239,29 @@ async function handleTelegramMessage(message: TelegramMessage) {
     if (conversation.autoBot) {
       console.log(`Auto-bot enabled for conversation ${conversation.id}`);
       try {
+        // Get provider configuration to use the correct LLM
+        const providerConfig = await db.providerConfig.findUnique({
+          where: { companyId: connection.companyId },
+        });
+
+        if (!providerConfig || !providerConfig.apiKeyEnc) {
+          console.error(`❌ No LLM provider configured for company ${connection.companyId}`);
+          throw new Error("LLM provider configuration is required for auto-bot");
+        }
+
+        console.log(`🤖 Telegram AutoBot: Using ${providerConfig.provider} for response generation`);
+
         // Generate bot response using RAG (same as Facebook/Instagram)
         const botResponse = await RAGChatbot.generateResponse(
           text,
           connection.companyId,
-          conversation.id
+          conversation.id,
+          {
+            providerConfig: providerConfig,
+            temperature: providerConfig.temperature,
+            maxTokens: providerConfig.maxTokens,
+            systemPrompt: providerConfig.systemPrompt,
+          }
         );
 
         if (botResponse.response) {

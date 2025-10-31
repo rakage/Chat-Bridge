@@ -211,25 +211,33 @@ export class RAGChatbot {
       };
       memory.messages.push(userMessage);
 
-      // 3. Get company's OpenAI API key if available
-      let openaiApiKey: string | undefined;
+      // 3. Get company's provider config for embeddings
+      let embeddingApiKey: string | undefined;
+      let embeddingProvider: "OPENAI" | "GEMINI" = "OPENAI";
+      
       try {
         const providerConfig = await db.providerConfig.findUnique({
           where: { companyId },
         });
 
-        if (providerConfig && providerConfig.provider === "OPENAI") {
-          openaiApiKey = await decrypt(providerConfig.apiKeyEnc);
-          console.log(`🔑 RAG Chatbot: Using company's OpenAI API key for embeddings`);
+        if (providerConfig && providerConfig.apiKeyEnc) {
+          // Use the same provider and API key as configured for text generation
+          embeddingApiKey = await decrypt(providerConfig.apiKeyEnc);
+          embeddingProvider = providerConfig.provider as "OPENAI" | "GEMINI";
+          console.log(`🔑 RAG Chatbot: Using company's ${providerConfig.provider} API key for embeddings`);
         } else {
-          console.log(`🔑 RAG Chatbot: Using global OpenAI API key for embeddings (company provider: ${providerConfig?.provider || 'none'})`);
+          console.log(`🔑 RAG Chatbot: No provider config found, using environment OpenAI API key`);
         }
       } catch (error) {
-        console.log(`⚠️ Could not retrieve company OpenAI key for RAG chatbot:`, error);
+        console.log(`⚠️ Could not retrieve company API key for embeddings:`, error);
       }
 
-      // 4. Generate embedding for the query with company's key if available
-      const queryEmbedding = await EmbeddingService.generateEmbedding(query, openaiApiKey);
+      // 4. Generate embedding for the query using configured provider
+      const queryEmbedding = await EmbeddingService.generateEmbedding(
+        query, 
+        embeddingApiKey,
+        embeddingProvider
+      );
 
       // 4. Search for relevant documents
       console.log(
