@@ -590,13 +590,14 @@ export default function CompanyPage() {
               invitations.map((invitation) => {
                 // Check if invitation has expired
                 const isExpired = new Date(invitation.expiresAt) < new Date();
+                const isFullyAccepted = invitation.status === "ACCEPTED";
                 const canInteract = invitation.status === "PENDING" && !isExpired;
 
                 return (
                   <div
                     key={invitation.id}
                     className={`p-4 border rounded-lg transition-colors ${
-                      isExpired 
+                      isExpired && !isFullyAccepted
                         ? 'border-red-200 bg-red-50/50 opacity-75' 
                         : !invitation.isActive 
                         ? 'border-gray-200 opacity-60 hover:bg-gray-50' 
@@ -609,9 +610,11 @@ export default function CompanyPage() {
                           <code className="text-sm font-mono bg-gray-100 px-2 py-1 rounded">
                             {invitation.code}
                           </code>
-                          <Badge className={getStatusBadgeColor(invitation.status)}>
-                            {invitation.status}
-                          </Badge>
+                          {invitation.status !== "PENDING" && (
+                            <Badge className={getStatusBadgeColor(invitation.status)}>
+                              {invitation.status}
+                            </Badge>
+                          )}
                           {isExpired && invitation.status === "PENDING" && (
                             <Badge className="bg-red-100 text-red-800 border-red-300">
                               EXPIRED
@@ -634,14 +637,13 @@ export default function CompanyPage() {
                         )}
                         <div className="flex items-center gap-2 text-sm text-gray-600">
                           <Calendar className="h-3 w-3" />
-                          <span className={isExpired ? 'text-red-600 font-medium' : ''}>
+                          <span>
                             Expires: {new Date(invitation.expiresAt).toLocaleDateString()}
-                            {isExpired && ' (Expired)'}
                           </span>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        {canInteract ? (
+                        {canInteract && (
                           <>
                             <Button
                               variant="outline"
@@ -679,11 +681,7 @@ export default function CompanyPage() {
                               )}
                             </Button>
                           </>
-                        ) : isExpired ? (
-                          <div className="flex items-center gap-2 text-sm text-red-600 font-medium">
-                            Cannot modify expired invitation
-                          </div>
-                        ) : null}
+                        )}
                       </div>
                     </div>
                     <div className="text-xs text-gray-500 pt-3 border-t border-gray-200">
