@@ -1593,6 +1593,8 @@ export async function processIncomingMessageDirect(
             temperature: providerConfig.temperature,
             maxTokens: providerConfig.maxTokens,
             systemPrompt: providerConfig.systemPrompt,
+            similarityThreshold: 0.1, // Low threshold for better document recall
+            searchLimit: 5,
           }
         );
 
@@ -1914,6 +1916,8 @@ export async function processInstagramMessageDirect(data: {
           temperature: providerConfig.temperature,
           maxTokens: providerConfig.maxTokens,
           systemPrompt: providerConfig.systemPrompt,
+          similarityThreshold: 0.1, // Low threshold for better document recall
+          searchLimit: 5,
         }
       );
 

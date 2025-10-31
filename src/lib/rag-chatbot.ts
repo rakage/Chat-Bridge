@@ -186,7 +186,7 @@ export class RAGChatbot {
       }
 
       const searchLimit = options.searchLimit || 5;
-      const threshold = options.similarityThreshold || 0.7;
+      const threshold = options.similarityThreshold || 0.1; // Lower threshold for better recall (was 0.7)
       const temperature = options.temperature || 0.7;
       const maxTokens = options.maxTokens || 1000;
 
