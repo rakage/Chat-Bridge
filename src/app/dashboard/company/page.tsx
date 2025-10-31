@@ -587,94 +587,116 @@ export default function CompanyPage() {
                 No invitations yet. Create one to invite team members.
               </p>
             ) : (
-              invitations.map((invitation) => (
-                <div
-                  key={invitation.id}
-                  className={`p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors ${!invitation.isActive ? 'opacity-60' : ''}`}
-                >
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2 flex-wrap">
-                        <code className="text-sm font-mono bg-gray-100 px-2 py-1 rounded">
-                          {invitation.code}
-                        </code>
-                        <Badge className={getStatusBadgeColor(invitation.status)}>
-                          {invitation.status}
-                        </Badge>
-                        {!invitation.isActive && (
-                          <Badge className="bg-gray-300 text-gray-800">
-                            PAUSED
+              invitations.map((invitation) => {
+                // Check if invitation has expired
+                const isExpired = new Date(invitation.expiresAt) < new Date();
+                const canInteract = invitation.status === "PENDING" && !isExpired;
+
+                return (
+                  <div
+                    key={invitation.id}
+                    className={`p-4 border rounded-lg transition-colors ${
+                      isExpired 
+                        ? 'border-red-200 bg-red-50/50 opacity-75' 
+                        : !invitation.isActive 
+                        ? 'border-gray-200 opacity-60 hover:bg-gray-50' 
+                        : 'border-gray-200 hover:bg-gray-50'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2 flex-wrap">
+                          <code className="text-sm font-mono bg-gray-100 px-2 py-1 rounded">
+                            {invitation.code}
+                          </code>
+                          <Badge className={getStatusBadgeColor(invitation.status)}>
+                            {invitation.status}
                           </Badge>
-                        )}
-                        <Badge variant="outline" className="text-xs">
-                          {invitation.usedCount}/{invitation.maxUses} uses
-                        </Badge>
-                      </div>
-                      {invitation.email && (
-                        <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
-                          <Mail className="h-3 w-3" />
-                          <span>{invitation.email}</span>
+                          {isExpired && invitation.status === "PENDING" && (
+                            <Badge className="bg-red-100 text-red-800 border-red-300">
+                              EXPIRED
+                            </Badge>
+                          )}
+                          {!invitation.isActive && !isExpired && (
+                            <Badge className="bg-gray-300 text-gray-800">
+                              PAUSED
+                            </Badge>
+                          )}
+                          <Badge variant="outline" className="text-xs">
+                            {invitation.usedCount}/{invitation.maxUses} uses
+                          </Badge>
                         </div>
-                      )}
-                      <div className="flex items-center gap-2 text-sm text-gray-600">
-                        <Calendar className="h-3 w-3" />
-                        <span>
-                          Expires: {new Date(invitation.expiresAt).toLocaleDateString()}
-                        </span>
+                        {invitation.email && (
+                          <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
+                            <Mail className="h-3 w-3" />
+                            <span>{invitation.email}</span>
+                          </div>
+                        )}
+                        <div className="flex items-center gap-2 text-sm text-gray-600">
+                          <Calendar className="h-3 w-3" />
+                          <span className={isExpired ? 'text-red-600 font-medium' : ''}>
+                            Expires: {new Date(invitation.expiresAt).toLocaleDateString()}
+                            {isExpired && ' (Expired)'}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {canInteract ? (
+                          <>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleToggleInvitation(invitation.id)}
+                              disabled={togglingInvitationId === invitation.id}
+                              className="flex items-center gap-2"
+                            >
+                              {togglingInvitationId === invitation.id ? (
+                                <>
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                </>
+                              ) : invitation.isActive ? (
+                                <>Pause</>
+                              ) : (
+                                <>Start</>
+                              )}
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleCopyInvitationLink(invitation.code)}
+                              className="flex items-center gap-2"
+                            >
+                              {copiedCode === invitation.code ? (
+                                <>
+                                  <Check className="h-4 w-4 text-green-600" />
+                                  Copied
+                                </>
+                              ) : (
+                                <>
+                                  <Copy className="h-4 w-4" />
+                                  Copy Link
+                                </>
+                              )}
+                            </Button>
+                          </>
+                        ) : isExpired ? (
+                          <div className="flex items-center gap-2 text-sm text-red-600 font-medium">
+                            Cannot modify expired invitation
+                          </div>
+                        ) : null}
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      {invitation.status === "PENDING" && (
-                        <>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleToggleInvitation(invitation.id)}
-                            disabled={togglingInvitationId === invitation.id}
-                            className="flex items-center gap-2"
-                          >
-                            {togglingInvitationId === invitation.id ? (
-                              <>
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              </>
-                            ) : invitation.isActive ? (
-                              <>Pause</>
-                            ) : (
-                              <>Start</>
-                            )}
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleCopyInvitationLink(invitation.code)}
-                            className="flex items-center gap-2"
-                          >
-                            {copiedCode === invitation.code ? (
-                              <>
-                                <Check className="h-4 w-4 text-green-600" />
-                                Copied
-                              </>
-                            ) : (
-                              <>
-                                <Copy className="h-4 w-4" />
-                                Copy Link
-                              </>
-                            )}
-                          </Button>
-                        </>
+                    <div className="text-xs text-gray-500 pt-3 border-t border-gray-200">
+                      Created by {invitation.invitedBy.name || invitation.invitedBy.email}
+                      {invitation.acceptedBy && (
+                        <span className="ml-2">
+                          • Accepted by {invitation.acceptedBy.name || invitation.acceptedBy.email}
+                        </span>
                       )}
                     </div>
                   </div>
-                  <div className="text-xs text-gray-500 pt-3 border-t border-gray-200">
-                    Created by {invitation.invitedBy.name || invitation.invitedBy.email}
-                    {invitation.acceptedBy && (
-                      <span className="ml-2">
-                        • Accepted by {invitation.acceptedBy.name || invitation.acceptedBy.email}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </CardContent>
