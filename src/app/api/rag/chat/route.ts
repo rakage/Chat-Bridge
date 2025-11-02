@@ -130,15 +130,15 @@ export async function POST(request: NextRequest) {
     };
     const usage = ragResponse.usage;
 
-    // Log token usage for auto-response (only for internal/auto-bot calls)
-    if (body.internal === true && usage && providerConfig) {
+    // Log token usage for all RAG requests (both playground and auto-bot)
+    if (usage && usage.totalTokens > 0) {
       try {
         await db.usageLog.create({
           data: {
             companyId,
-            type: "AUTO_RESPONSE",
-            provider: providerConfig.provider,
-            model: providerConfig.model,
+            type: "AUTO_RESPONSE", // Type applies to all RAG chat responses
+            provider: providerConfig?.provider || "GEMINI", // Default to GEMINI if no config
+            model: providerConfig?.model || "gemini-1.5-flash",
             inputTokens: usage.promptTokens || 0,
             outputTokens: usage.completionTokens || 0,
             totalTokens: usage.totalTokens || 0,
@@ -147,10 +147,12 @@ export async function POST(request: NextRequest) {
               message: message.substring(0, 100), // First 100 chars for reference
               sourceDocuments: contextInfo.sourceDocuments,
               relevantChunks: contextInfo.relevantChunks,
+              isAutoBot: body.internal === true,
+              source: body.internal === true ? 'webhook' : 'playground',
             },
           },
         });
-        console.log(`✅ Logged ${usage.totalTokens} tokens for auto-response`);
+        console.log(`✅ Logged ${usage.totalTokens} tokens (${usage.promptTokens} prompt + ${usage.completionTokens} completion)`);
       } catch (logError) {
         console.error('⚠️ Failed to log token usage:', logError);
         // Don't fail the request if logging fails

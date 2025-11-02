@@ -294,7 +294,7 @@ export class RAGChatbot {
       console.log(
         "🧠 RAGChatbot: Generating response with configured LLM provider..."
       );
-      const response = await this.generateWithLLM(
+      const llmResponse = await this.generateWithLLM(
         query,
         conversationContext,
         documentContext,
@@ -303,6 +303,9 @@ export class RAGChatbot {
         options.systemPrompt,
         options.providerConfig
       );
+
+      const response = llmResponse.text;
+      const actualUsage = llmResponse.usage;
 
       // 8. Add assistant response to memory
       const assistantMessage: ChatMessage = {
@@ -336,13 +339,9 @@ export class RAGChatbot {
           query,
         },
         usage: {
-          promptTokens: this.estimateTokens(
-            conversationContext + documentContext + query
-          ),
-          completionTokens: this.estimateTokens(response),
-          totalTokens: this.estimateTokens(
-            conversationContext + documentContext + query + response
-          ),
+          promptTokens: actualUsage?.promptTokens || 0,
+          completionTokens: actualUsage?.completionTokens || 0,
+          totalTokens: actualUsage?.totalTokens || 0,
         },
         memory: updatedMemory,
       };
@@ -550,7 +549,7 @@ export class RAGChatbot {
     maxTokens: number,
     customSystemPrompt?: string,
     providerConfig?: any
-  ): Promise<string> {
+  ): Promise<{ text: string; usage?: { promptTokens?: number; completionTokens?: number; totalTokens?: number } }> {
     // If we have providerConfig, use LLMService with the configured provider
     if (providerConfig?.apiKeyEnc) {
       try {
@@ -598,9 +597,10 @@ Please provide a helpful response.`;
         ]);
 
         console.log(
-          `✅ RAGChatbot: Generated response using ${providerConfig.provider}`
+          `✅ RAGChatbot: Generated response using ${providerConfig.provider}`,
+          { usage: response.usage }
         );
-        return response.text;
+        return { text: response.text, usage: response.usage };
       } catch (error) {
         console.error(
           `❌ RAGChatbot: Failed to use configured provider ${providerConfig.provider}, falling back to Gemini:`,
@@ -631,7 +631,7 @@ Please provide a helpful response.`;
     temperature: number,
     maxTokens: number,
     customSystemPrompt?: string
-  ): Promise<string> {
+  ): Promise<{ text: string; usage?: { promptTokens?: number; completionTokens?: number; totalTokens?: number } }> {
     if (!process.env.GEMINI_API_KEY) {
       throw new Error("GEMINI_API_KEY environment variable is required");
     }
@@ -706,7 +706,14 @@ Please provide a helpful response.`;
       throw new Error("Empty response from Gemini");
     }
 
-    return text.trim();
+    // Get token usage from Gemini response
+    const usage = {
+      promptTokens: response.usageMetadata?.promptTokenCount,
+      completionTokens: response.usageMetadata?.candidatesTokenCount,
+      totalTokens: response.usageMetadata?.totalTokenCount,
+    };
+
+    return { text: text.trim(), usage };
   }
 
   /**
