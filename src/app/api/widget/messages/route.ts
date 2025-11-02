@@ -232,6 +232,34 @@ export async function POST(req: NextRequest) {
           }
         );
 
+        // Log token usage for Widget auto-bot responses
+        if (botResponse.usage && botResponse.usage.totalTokens > 0) {
+          try {
+            await db.usageLog.create({
+              data: {
+                companyId: widgetConfig.companyId,
+                type: "AUTO_RESPONSE",
+                provider: providerConfig?.provider || "GEMINI",
+                model: providerConfig?.model || "gemini-1.5-flash",
+                inputTokens: botResponse.usage.promptTokens || 0,
+                outputTokens: botResponse.usage.completionTokens || 0,
+                totalTokens: botResponse.usage.totalTokens || 0,
+                metadata: {
+                  conversationId: conversation.id,
+                  message: message.substring(0, 100),
+                  platform: "widget",
+                  source: "widget",
+                  isAutoBot: true,
+                },
+              },
+            });
+            console.log(`✅ Logged ${botResponse.usage.totalTokens} tokens (${botResponse.usage.promptTokens} prompt + ${botResponse.usage.completionTokens} completion) for Widget auto-bot`);
+          } catch (logError) {
+            console.error('⚠️ Failed to log token usage:', logError);
+            // Don't fail the message if logging fails
+          }
+        }
+
         if (botResponse.response) {
           // Save bot response to database
           const botMessage = await db.message.create({

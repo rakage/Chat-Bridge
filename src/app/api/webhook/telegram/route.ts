@@ -264,6 +264,34 @@ async function handleTelegramMessage(message: TelegramMessage) {
           }
         );
 
+        // Log token usage for Telegram auto-bot responses
+        if (botResponse.usage && botResponse.usage.totalTokens > 0) {
+          try {
+            await db.usageLog.create({
+              data: {
+                companyId: connection.companyId,
+                type: "AUTO_RESPONSE",
+                provider: providerConfig.provider,
+                model: providerConfig.model,
+                inputTokens: botResponse.usage.promptTokens || 0,
+                outputTokens: botResponse.usage.completionTokens || 0,
+                totalTokens: botResponse.usage.totalTokens || 0,
+                metadata: {
+                  conversationId: conversation.id,
+                  message: text.substring(0, 100),
+                  platform: "telegram",
+                  source: "webhook",
+                  isAutoBot: true,
+                },
+              },
+            });
+            console.log(`✅ Logged ${botResponse.usage.totalTokens} tokens (${botResponse.usage.promptTokens} prompt + ${botResponse.usage.completionTokens} completion) for Telegram auto-bot`);
+          } catch (logError) {
+            console.error('⚠️ Failed to log token usage:', logError);
+            // Don't fail the message if logging fails
+          }
+        }
+
         if (botResponse.response) {
           // Save bot response to database
           const botMessage = await db.message.create({

@@ -1598,6 +1598,34 @@ export async function processIncomingMessageDirect(
           }
         );
 
+        // Log token usage for Facebook auto-bot responses
+        if (botResponse.usage && botResponse.usage.totalTokens > 0) {
+          try {
+            await db.usageLog.create({
+              data: {
+                companyId: pageConnection.companyId,
+                type: "AUTO_RESPONSE",
+                provider: providerConfig.provider,
+                model: providerConfig.model,
+                inputTokens: botResponse.usage.promptTokens || 0,
+                outputTokens: botResponse.usage.completionTokens || 0,
+                totalTokens: botResponse.usage.totalTokens || 0,
+                metadata: {
+                  conversationId: conversation.id,
+                  message: messageText.substring(0, 100),
+                  platform: "facebook",
+                  source: "webhook",
+                  isAutoBot: true,
+                },
+              },
+            });
+            console.log(`✅ Logged ${botResponse.usage.totalTokens} tokens (${botResponse.usage.promptTokens} prompt + ${botResponse.usage.completionTokens} completion) for Facebook auto-bot`);
+          } catch (logError) {
+            console.error('⚠️ Failed to log token usage:', logError);
+            // Don't fail the message if logging fails
+          }
+        }
+
         if (botResponse.response) {
           // Save bot response to database
           const botMessage = await db.message.create({
@@ -1920,6 +1948,34 @@ export async function processInstagramMessageDirect(data: {
           searchLimit: 5,
         }
       );
+
+      // Log token usage for Instagram auto-bot responses
+      if (botResponse.usage && botResponse.usage.totalTokens > 0) {
+        try {
+          await db.usageLog.create({
+            data: {
+              companyId: instagramConnection.companyId,
+              type: "AUTO_RESPONSE",
+              provider: providerConfig.provider,
+              model: providerConfig.model,
+              inputTokens: botResponse.usage.promptTokens || 0,
+              outputTokens: botResponse.usage.completionTokens || 0,
+              totalTokens: botResponse.usage.totalTokens || 0,
+              metadata: {
+                conversationId: conversation.id,
+                message: messageText.substring(0, 100),
+                platform: "instagram",
+                source: "webhook",
+                isAutoBot: true,
+              },
+            },
+          });
+          console.log(`✅ Logged ${botResponse.usage.totalTokens} tokens (${botResponse.usage.promptTokens} prompt + ${botResponse.usage.completionTokens} completion) for Instagram auto-bot`);
+        } catch (logError) {
+          console.error('⚠️ Failed to log token usage:', logError);
+          // Don't fail the message if logging fails
+        }
+      }
 
       if (botResponse.response) {
         const botMessage = await db.message.create({

@@ -128,16 +128,35 @@ To verify token usage is being logged:
 
 ## Files Modified
 
+### Core RAG Library
 1. ✅ `src/lib/rag-chatbot.ts`
    - Updated `generateWithLLM()` return type to include usage
    - Modified `generateWithGemini()` to extract actual token usage
    - Changed response usage to use actual tokens instead of estimates
 
-2. ✅ `src/app/api/rag/chat/route.ts`
+### API Endpoints
+2. ✅ `src/app/api/rag/chat/route.ts` (Playground)
    - Removed `body.internal === true` condition
    - Updated to log all RAG requests
    - Added source metadata (webhook vs playground)
    - Handle missing provider config
+
+3. ✅ `src/lib/queue.ts` (Facebook & Instagram Webhooks)
+   - Added token logging for Facebook auto-bot responses
+   - Added token logging for Instagram auto-bot responses
+   - Both use actual token counts from OpenAI/Gemini APIs
+
+4. ✅ `src/app/api/webhook/telegram/route.ts` (Telegram)
+   - Added token logging for Telegram auto-bot responses
+   - Tracks actual usage from LLM provider
+
+5. ✅ `src/app/api/widget/messages/route.ts` (Widget Messages)
+   - Added token logging for Widget auto-bot responses
+   - Includes fallback for cases with no provider config
+
+6. ✅ `src/app/api/widget/init/route.ts` (Widget Init)
+   - Added token logging for Widget initialization auto-bot responses
+   - Tracks usage from first widget interaction
 
 ## Next Steps
 
