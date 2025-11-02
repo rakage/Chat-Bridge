@@ -59,6 +59,7 @@ model Company {
   users                  User[]
   vectorSearches         VectorSearch[]
   widgetConfig           WidgetConfig?
+  usageLogs              UsageLog[]
 
   @@map("companies")
 }
@@ -485,6 +486,30 @@ model RagMessageCache {
   @@index([companyId, messageHash])
   @@index([lastUsedAt]) // For cleanup of old cache entries
   @@map("rag_message_cache")
+}
+
+model UsageLog {
+  id            String    @id @default(cuid())
+  companyId     String
+  type          UsageType // TRAINING or AUTO_RESPONSE
+  provider      Provider
+  model         String
+  inputTokens   Int
+  outputTokens  Int       @default(0)
+  totalTokens   Int       // inputTokens + outputTokens
+  metadata      Json?     // Additional context (document name, conversation ID, etc.)
+  createdAt     DateTime  @default(now())
+  company       Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, createdAt])
+  @@index([companyId, type])
+  @@index([createdAt])
+  @@map("usage_logs")
+}
+
+enum UsageType {
+  TRAINING
+  AUTO_RESPONSE
 }
 
 enum InvitationStatus {

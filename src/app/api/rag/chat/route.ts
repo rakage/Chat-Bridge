@@ -130,6 +130,33 @@ export async function POST(request: NextRequest) {
     };
     const usage = ragResponse.usage;
 
+    // Log token usage for auto-response (only for internal/auto-bot calls)
+    if (body.internal === true && usage && providerConfig) {
+      try {
+        await db.usageLog.create({
+          data: {
+            companyId,
+            type: "AUTO_RESPONSE",
+            provider: providerConfig.provider,
+            model: providerConfig.model,
+            inputTokens: usage.promptTokens || 0,
+            outputTokens: usage.completionTokens || 0,
+            totalTokens: usage.totalTokens || 0,
+            metadata: {
+              conversationId,
+              message: message.substring(0, 100), // First 100 chars for reference
+              sourceDocuments: contextInfo.sourceDocuments,
+              relevantChunks: contextInfo.relevantChunks,
+            },
+          },
+        });
+        console.log(`✅ Logged ${usage.totalTokens} tokens for auto-response`);
+      } catch (logError) {
+        console.error('⚠️ Failed to log token usage:', logError);
+        // Don't fail the request if logging fails
+      }
+    }
+
     console.log("🧠 API: RAG response received:", {
       responseLength: response.length,
       memorySize: ragResponse.memory.messages.length,

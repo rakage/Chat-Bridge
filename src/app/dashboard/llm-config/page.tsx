@@ -34,8 +34,26 @@ import {
   Settings,
   Zap,
   Trash2,
+  History,
+  TrendingUp,
+  Database,
+  MessageSquare,
 } from "lucide-react";
 import { OpenAI, Gemini } from "@lobehub/icons";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
 
 export default function LLMConfigPage() {
   const { data: session, status: sessionStatus } = useSession();
@@ -47,6 +65,12 @@ export default function LLMConfigPage() {
   const hasMountedRef = useRef(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  // Usage logs state
+  const [usageLogs, setUsageLogs] = useState<any[]>([]);
+  const [usageStats, setUsageStats] = useState<any>(null);
+  const [usageLoading, setUsageLoading] = useState(false);
+  const [selectedFilter, setSelectedFilter] = useState<string>("all");
 
   const [llmSettings, setLlmSettings] = useState({
     provider: "OPENAI",
@@ -66,6 +90,24 @@ export default function LLMConfigPage() {
     systemPrompt: string;
     hasApiKey: boolean;
   } | null>(null);
+
+  // Load usage logs
+  const loadUsageLogs = useCallback(async () => {
+    setUsageLoading(true);
+    try {
+      const typeParam = selectedFilter === "all" ? "" : `&type=${selectedFilter}`;
+      const response = await fetch(`/api/usage-logs?limit=50${typeParam}`);
+      if (response.ok) {
+        const data = await response.json();
+        setUsageLogs(data.logs);
+        setUsageStats(data.statistics);
+      }
+    } catch (error) {
+      console.error("Failed to load usage logs:", error);
+    } finally {
+      setUsageLoading(false);
+    }
+  }, [selectedFilter]);
 
   // Load cached data on component mount
   useEffect(() => {
@@ -157,7 +199,15 @@ export default function LLMConfigPage() {
 
     hasMountedRef.current = true;
     loadLLMSettings();
-  }, [session, sessionStatus, dataLoaded, loadLLMSettings]);
+    loadUsageLogs();
+  }, [session, sessionStatus, dataLoaded, loadLLMSettings, loadUsageLogs]);
+
+  // Reload usage logs when filter changes
+  useEffect(() => {
+    if (dataLoaded) {
+      loadUsageLogs();
+    }
+  }, [selectedFilter, dataLoaded, loadUsageLogs]);
 
   const handleLLMSave = async () => {
     setLlmLoading(true);
@@ -800,6 +850,179 @@ export default function LLMConfigPage() {
           </Card>
         </div>
       </div>
+
+      {/* Token Usage History Section */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center space-x-2">
+                <History className="h-5 w-5 text-blue-600" />
+                <span>Token Usage History</span>
+              </CardTitle>
+              <CardDescription>
+                Track your token consumption for training and AI auto-responses
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {/* Statistics Cards */}
+          {usageStats && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              <Card className="bg-blue-50 border-blue-200">
+                <CardContent className="pt-6">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-blue-600">Total Tokens</p>
+                      <p className="text-2xl font-bold text-blue-900 mt-2">
+                        {usageStats.overall.totalTokens.toLocaleString()}
+                      </p>
+                      <p className="text-xs text-blue-600 mt-1">
+                        {usageStats.overall.count} requests
+                      </p>
+                    </div>
+                    <div className="rounded-full bg-blue-100 p-3">
+                      <TrendingUp className="h-5 w-5 text-blue-600" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-purple-50 border-purple-200">
+                <CardContent className="pt-6">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-purple-600">Training</p>
+                      <p className="text-2xl font-bold text-purple-900 mt-2">
+                        {usageStats.training.totalTokens.toLocaleString()}
+                      </p>
+                      <p className="text-xs text-purple-600 mt-1">
+                        {usageStats.training.count} sessions
+                      </p>
+                    </div>
+                    <div className="rounded-full bg-purple-100 p-3">
+                      <Database className="h-5 w-5 text-purple-600" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-green-50 border-green-200">
+                <CardContent className="pt-6">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-green-600">Auto-Response</p>
+                      <p className="text-2xl font-bold text-green-900 mt-2">
+                        {usageStats.autoResponse.totalTokens.toLocaleString()}
+                      </p>
+                      <p className="text-xs text-green-600 mt-1">
+                        {usageStats.autoResponse.count} responses
+                      </p>
+                    </div>
+                    <div className="rounded-full bg-green-100 p-3">
+                      <MessageSquare className="h-5 w-5 text-green-600" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {/* Filter Tabs */}
+          <Tabs value={selectedFilter} onValueChange={setSelectedFilter} className="w-full">
+            <TabsList className="grid w-full grid-cols-3 mb-4">
+              <TabsTrigger value="all">All</TabsTrigger>
+              <TabsTrigger value="TRAINING">Training</TabsTrigger>
+              <TabsTrigger value="AUTO_RESPONSE">Auto-Response</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value={selectedFilter} className="mt-0">
+              {usageLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                </div>
+              ) : usageLogs.length === 0 ? (
+                <div className="text-center py-8">
+                  <History className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                  <p className="text-sm text-gray-500">No usage logs yet</p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    Start training documents or enable auto-bot to track usage
+                  </p>
+                </div>
+              ) : (
+                <div className="border rounded-lg overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-[140px]">Type</TableHead>
+                        <TableHead>Provider</TableHead>
+                        <TableHead>Model</TableHead>
+                        <TableHead className="text-right">Input Tokens</TableHead>
+                        <TableHead className="text-right">Output Tokens</TableHead>
+                        <TableHead className="text-right">Total Tokens</TableHead>
+                        <TableHead className="w-[180px]">Date</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {usageLogs.map((log) => (
+                        <TableRow key={log.id}>
+                          <TableCell>
+                            <span
+                              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                log.type === "TRAINING"
+                                  ? "bg-purple-100 text-purple-800"
+                                  : "bg-green-100 text-green-800"
+                              }`}
+                            >
+                              {log.type === "TRAINING" ? (
+                                <>
+                                  <Database className="h-3 w-3 mr-1" />
+                                  Training
+                                </>
+                              ) : (
+                                <>
+                                  <MessageSquare className="h-3 w-3 mr-1" />
+                                  Auto-Response
+                                </>
+                              )}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center space-x-2">
+                              {log.provider === "OPENAI" ? (
+                                <OpenAI size={16} />
+                              ) : (
+                                <Gemini.Color size={16} />
+                              )}
+                              <span className="text-sm">{log.provider}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="font-mono text-xs text-gray-600">
+                            {log.model}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-sm">
+                            {log.inputTokens.toLocaleString()}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-sm">
+                            {log.outputTokens.toLocaleString()}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-sm font-semibold">
+                            {log.totalTokens.toLocaleString()}
+                          </TableCell>
+                          <TableCell className="text-sm text-gray-500">
+                            {new Date(log.createdAt).toLocaleString()}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
 
         {/* Delete Configuration Section */}
         {currentConfig && currentConfig.hasApiKey && (

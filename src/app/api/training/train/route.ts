@@ -224,6 +224,7 @@ async function processTrainingAsync(
     // Process in batches for embedding generation
     const batchSize = 10; // Smaller batches for API rate limits
     const vectorDocuments: VectorDocument[] = [];
+    let totalTokensUsed = 0; // Track total tokens for logging
 
     for (let i = 0; i < allDocumentChunks.length; i += batchSize) {
       const batch = allDocumentChunks.slice(i, i + batchSize);
@@ -236,6 +237,12 @@ async function processTrainingAsync(
           embeddingApiKey,
           embeddingProvider
         );
+
+        // Track token usage
+        if (embeddingResult.tokenCounts) {
+          const batchTokens = embeddingResult.tokenCounts.reduce((sum, count) => sum + count, 0);
+          totalTokensUsed += batchTokens;
+        }
 
         // Create vector documents
         batch.forEach((chunk, batchIndex) => {
@@ -325,36 +332,37 @@ async function processTrainingAsync(
       data: { progress: 95 },
     });
 
-    // Update company's provider config with enhanced system prompt
-    const session = await db.trainingSession.findUnique({
-      where: { id: sessionId },
-      include: {
-        company: {
-          include: { providerConfig: true },
-        },
-        documents: true,
-      },
-    });
-
-    if (session?.company.providerConfig) {
-      const documentSummary = `Based on ${
-        documents.length
-      } trained document(s): ${documents
-        .map((d) => d.originalName)
-        .join(", ")}`;
-      const enhancedPrompt = session.company.providerConfig.systemPrompt;
-      const finalPrompt = `${enhancedPrompt}\n\nTraining Context: ${documentSummary}. You now have access to company documents and can provide more accurate responses based on this context.`;
-
-      await db.providerConfig.update({
-        where: { id: session.company.providerConfig.id },
-        data: {
-          systemPrompt: finalPrompt,
-        },
-      });
-    }
+    // System prompt remains unchanged - training context is managed separately
 
     // Get company ID from first document to clear cache
     const companyId = documents[0]?.companyId;
+
+    // Log token usage for training
+    if (companyId && totalTokensUsed > 0) {
+      try {
+        await db.usageLog.create({
+          data: {
+            companyId,
+            type: "TRAINING",
+            provider: embeddingProvider,
+            model: embeddingProvider === "OPENAI" ? "text-embedding-3-small" : "text-embedding-004",
+            inputTokens: totalTokensUsed,
+            outputTokens: 0,
+            totalTokens: totalTokensUsed,
+            metadata: {
+              sessionId: sessionId,
+              documentCount: documents.length,
+              documentNames: documents.map(d => d.originalName),
+              totalChunks: totalChunks,
+            },
+          },
+        });
+        console.log(`✅ Logged ${totalTokensUsed} tokens used for training`);
+      } catch (logError) {
+        console.error('⚠️ Failed to log token usage:', logError);
+        // Don't fail the training if logging fails
+      }
+    }
 
     // Mark training as completed
     await db.trainingSession.update({
