@@ -26,6 +26,8 @@ export async function POST(request: NextRequest) {
     }
 
     console.log(`💾 Saving Instagram connection for user ${session.user.id}: @${userProfile.username}`);
+    console.log(`🏢 User's current company: ${session.user.companyId}`);
+    console.log(`📱 Instagram user ID: ${userProfile.id}`);
 
     // Check if this Instagram account is already connected to another company
     const existingConnection = await db.instagramConnection.findFirst({
@@ -39,16 +41,20 @@ export async function POST(request: NextRequest) {
       select: {
         id: true,
         companyId: true,
+        username: true,
       },
     });
 
     if (existingConnection) {
-      console.error(`❌ Instagram account @${userProfile.username} is already connected to another company`);
+      console.error(`❌ Instagram account @${userProfile.username} (ID: ${userProfile.id}) is already connected to another company (${existingConnection.companyId})`);
+      console.error(`❌ Current user's company: ${session.user.companyId}`);
       return NextResponse.json(
         { error: "This Instagram account is already connected to another company" },
         { status: 400 }
       );
     }
+
+    console.log(`✅ No duplicate found, proceeding to save...`);
 
     // Save to database using Prisma (upsert to handle updates)
     const instagramConnection = await db.instagramConnection.upsert({
