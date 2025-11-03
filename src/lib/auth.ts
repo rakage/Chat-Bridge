@@ -58,7 +58,7 @@ export const authOptions: NextAuthOptions = {
           email: user.email,
           name: user.name,
           role: user.role,
-          companyId: user.companyId,
+          companyId: user.currentCompanyId || user.companyId, // Use currentCompanyId, fallback to legacy companyId
         };
       },
     }),
@@ -85,19 +85,19 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async jwt({ token, user, trigger }) {
       if (user || trigger === "update") {
-        // Fetch user with company and role information
+        // Fetch user with current company and role information
         // This runs on sign-in and when session.update() is called
         const dbUser = await db.user.findUnique({
           where: { id: token.sub || user?.id },
           include: {
-            company: true,
+            currentCompany: true, // Fetch based on currentCompanyId
           },
         });
 
         if (dbUser) {
           token.role = dbUser.role;
-          token.companyId = dbUser.companyId;
-          token.companyName = dbUser.company?.name;
+          token.companyId = dbUser.currentCompanyId || dbUser.companyId; // Use currentCompanyId, fallback to legacy companyId
+          token.companyName = dbUser.currentCompany?.name;
           token.name = dbUser.name; // Add user name to token
           token.picture = dbUser.photoUrl; // Add photo URL to token
         }
