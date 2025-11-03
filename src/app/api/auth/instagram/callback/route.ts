@@ -74,7 +74,7 @@ export async function GET(request: NextRequest) {
       // Get user's company
       const user = await db.user.findUnique({
         where: { id: session.user.id },
-        select: { companyId: true }
+        select: { id: true, companyId: true }
       });
 
       if (!user?.companyId) {
@@ -87,8 +87,37 @@ export async function GET(request: NextRequest) {
       // Encrypt access token
       const encryptedToken = await encrypt(longTokenResponse.access_token);
 
+      console.log(`💾 Saving Instagram connection for user ${user.id}: @${profile.username}`);
+      console.log(`🏢 User's current company: ${user.companyId}`);
+      console.log(`📱 Instagram user ID: ${profile.id}`);
+
+      // Check if this Instagram account is already connected to another company
+      const existingConnection = await db.instagramConnection.findFirst({
+        where: {
+          instagramUserId: profile.id,
+          NOT: {
+            companyId: user.companyId || undefined, // Different company
+          },
+          isActive: true,
+        },
+        select: {
+          id: true,
+          companyId: true,
+          username: true,
+        },
+      });
+
+      if (existingConnection) {
+        console.error(`❌ Instagram account @${profile.username} (ID: ${profile.id}) is already connected to another company (${existingConnection.companyId})`);
+        console.error(`❌ Current user's company: ${user.companyId}`);
+        return NextResponse.redirect(
+          new URL("/dashboard/integrations/instagram/setup?error=" + encodeURIComponent("This Instagram account is already connected to another company"), baseUrl)
+        );
+      }
+
+      console.log(`✅ No duplicate found, proceeding to save...`);
+
       // Save or update Instagram connection
-      console.log("💾 Saving Instagram connection to database...");
       const connection = await db.instagramConnection.upsert({
         where: {
           companyId_instagramUserId: {
