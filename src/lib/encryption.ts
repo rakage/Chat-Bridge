@@ -1,3 +1,4 @@
+// @ts-ignore - libsodium-wrappers doesn't have type definitions
 import sodium from "libsodium-wrappers";
 
 let sodiumReady = false;
@@ -20,17 +21,17 @@ async function initializeSodium() {
     try {
       // Convert base64 key to Uint8Array
       console.log("🔐 Converting base64 key to bytes...");
-      encryptionKey = sodium.from_base64(
+      const key = sodium.from_base64(
         ENCRYPTION_KEY,
         sodium.base64_variants.ORIGINAL
       );
-      console.log("🔐 Key converted, length:", encryptionKey.length);
+      console.log("🔐 Key converted, length:", key.length);
       console.log("🔐 Expected length:", sodium.crypto_secretbox_KEYBYTES);
 
-      if (encryptionKey.length !== sodium.crypto_secretbox_KEYBYTES) {
+      if (key.length !== sodium.crypto_secretbox_KEYBYTES) {
         console.error(
           "❌ Invalid key length:",
-          encryptionKey.length,
+          key.length,
           "expected:",
           sodium.crypto_secretbox_KEYBYTES
         );
@@ -39,6 +40,7 @@ async function initializeSodium() {
         );
       }
 
+      encryptionKey = key;
       console.log("✅ Encryption key initialized successfully");
     } catch (keyError) {
       console.error("❌ Error processing encryption key:", keyError);
@@ -55,7 +57,7 @@ function getKey(): Uint8Array {
       "Encryption not initialized. Call initializeSodium() first."
     );
   }
-  return encryptionKey;
+  return encryptionKey as Uint8Array;
 }
 
 /**

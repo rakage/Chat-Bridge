@@ -61,6 +61,12 @@ export async function POST(req: NextRequest) {
       where: {
         widgetConfigId: widgetConfig.id,
         psid,
+        status: {
+          in: ["OPEN", "SNOOZED"],
+        },
+      },
+      orderBy: {
+        lastMessageAt: "desc",
       },
       include: {
         messages: {

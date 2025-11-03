@@ -24,6 +24,7 @@ model User {
   invitationsAccepted    CompanyInvitation[] @relation("AcceptedBy")
   sessions               Session[]
   trainingSessions       TrainingSession[]
+  cannedResponses        CannedResponse[]
   company                Company?            @relation(fields: [companyId], references: [id])
 
   @@index([companyId])
@@ -60,6 +61,7 @@ model Company {
   vectorSearches         VectorSearch[]
   widgetConfig           WidgetConfig?
   usageLogs              UsageLog[]
+  cannedResponses        CannedResponse[]
 
   @@map("companies")
 }
@@ -505,6 +507,35 @@ model UsageLog {
   @@index([companyId, type])
   @@index([createdAt])
   @@map("usage_logs")
+}
+
+model CannedResponse {
+  id          String                @id @default(cuid())
+  companyId   String
+  createdById String
+  title       String                // Descriptive title like "Shipping Policy"
+  content     String                // The actual response text
+  shortcut    String?               // Optional shortcut like "shipping" for /shipping
+  category    String?               // Optional category like "Sales", "Support", "Returns"
+  scope       CannedResponseScope   @default(PERSONAL)
+  isActive    Boolean               @default(true)
+  usageCount  Int                   @default(0) // Track how many times it's used
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+  company     Company               @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdBy   User                  @relation(fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, shortcut])
+  @@index([companyId, scope])
+  @@index([companyId, createdById])
+  @@index([companyId, category])
+  @@index([shortcut])
+  @@map("canned_responses")
+}
+
+enum CannedResponseScope {
+  PERSONAL  // Only visible to creator
+  COMPANY   // Visible to entire company
 }
 
 enum UsageType {

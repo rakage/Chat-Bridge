@@ -163,6 +163,86 @@ export async function PATCH(
     const body = await request.json();
 
     // Handle different actions
+    if (body.action === "close") {
+      // Get conversation with related data to check permissions
+      const conversation = await db.conversation.findUnique({
+        where: { id: conversationId },
+        include: {
+          pageConnection: {
+            include: {
+              company: true,
+            },
+          },
+          instagramConnection: {
+            include: {
+              company: true,
+            },
+          },
+          telegramConnection: {
+            include: {
+              company: true,
+            },
+          },
+          widgetConfig: {
+            include: {
+              company: true,
+            },
+          },
+        },
+      });
+
+      if (!conversation) {
+        return NextResponse.json(
+          { error: "Conversation not found" },
+          { status: 404 }
+        );
+      }
+
+      // Check access permissions
+      const company = conversation.pageConnection?.company || conversation.instagramConnection?.company || conversation.telegramConnection?.company || conversation.widgetConfig?.company;
+      if (
+        session.user.companyId !== company?.id &&
+        session.user.role !== "OWNER"
+      ) {
+        return NextResponse.json({ error: "Access denied" }, { status: 403 });
+      }
+
+      // Update conversation status to CLOSED
+      const updatedConversation = await db.conversation.update({
+        where: { id: conversationId },
+        data: {
+          status: "CLOSED",
+        },
+      });
+
+      console.log(
+        `✅ Conversation ${conversationId} closed by user ${session.user.id}`
+      );
+
+      // Emit socket event to notify other clients
+      try {
+        socketService.emitToCompany(
+          company?.id || '',
+          "conversation:closed",
+          {
+            conversationId,
+            userId: session.user.id,
+            timestamp: new Date().toISOString(),
+          }
+        );
+      } catch (emitError) {
+        console.error("❌ Failed to emit conversation:closed event:", emitError);
+      }
+
+      return NextResponse.json({
+        success: true,
+        conversation: {
+          id: updatedConversation.id,
+          status: updatedConversation.status,
+        },
+      });
+    }
+
     if (body.action === "mark_read") {
       // Get conversation with related data to check permissions
       const conversation = await db.conversation.findUnique({

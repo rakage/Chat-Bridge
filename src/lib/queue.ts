@@ -203,12 +203,17 @@ export async function initializeWorkers() {
             });
 
             // Find or create conversation using the database ID, not Facebook pageId
-            let conversation = await db.conversation.findUnique({
+            // Only find OPEN or SNOOZED conversations, not CLOSED ones
+            let conversation = await db.conversation.findFirst({
               where: {
-                pageConnectionId_psid: {
-                  pageConnectionId: pageConnection.id, // Use database ID, not Facebook pageId
-                  psid: senderId,
+                pageConnectionId: pageConnection.id, // Use database ID, not Facebook pageId
+                psid: senderId,
+                status: {
+                  in: ["OPEN", "SNOOZED"],
                 },
+              },
+              orderBy: {
+                lastMessageAt: "desc",
               },
             });
 

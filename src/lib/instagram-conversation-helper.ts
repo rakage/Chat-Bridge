@@ -66,13 +66,18 @@ export async function getOrCreateInstagramConversation(
   try {
     console.log(`🔍 Getting or creating Instagram conversation for connection ${instagramConnectionId} and user ${customerIGSID} (skipCreate: ${skipCreate})`);
     
-    // STEP 1: Try to find existing conversation by exact PSID match
-    let conversation = await db.conversation.findUnique({
+    // STEP 1: Try to find existing OPEN or SNOOZED conversation by exact PSID match
+    // Don't return CLOSED conversations - create new one instead
+    let conversation = await db.conversation.findFirst({
       where: {
-        instagramConnectionId_psid: {
-          instagramConnectionId: instagramConnectionId,
-          psid: customerIGSID,
+        instagramConnectionId: instagramConnectionId,
+        psid: customerIGSID,
+        status: {
+          in: ["OPEN", "SNOOZED"],
         },
+      },
+      orderBy: {
+        lastMessageAt: "desc",
       },
       include: {
         instagramConnection: {
@@ -82,7 +87,7 @@ export async function getOrCreateInstagramConversation(
     });
 
     if (conversation) {
-      console.log(`✅ Found existing conversation by PSID: ${conversation.id}`);
+      console.log(`✅ Found existing OPEN/SNOOZED conversation by PSID: ${conversation.id}`);
       return conversation;
     }
 

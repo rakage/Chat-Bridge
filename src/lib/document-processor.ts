@@ -1,4 +1,5 @@
 import mammoth from "mammoth";
+// @ts-ignore - pdf-parse doesn't have type definitions
 import pdfParse from "pdf-parse";
 import fs from "fs/promises";
 import path from "path";

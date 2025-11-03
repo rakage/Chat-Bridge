@@ -68,13 +68,17 @@ async function handleTelegramMessage(message: TelegramMessage) {
 
     console.log(`📱 Using bot: @${connection.botUsername} for company ${connection.companyId}`);
 
-    // Find or create conversation
-    let conversation = await db.conversation.findUnique({
+    // Find or create conversation (only OPEN or SNOOZED, not CLOSED)
+    let conversation = await db.conversation.findFirst({
       where: {
-        telegramConnectionId_psid: {
-          telegramConnectionId: connection.id,
-          psid: chatId,
+        telegramConnectionId: connection.id,
+        psid: chatId,
+        status: {
+          in: ["OPEN", "SNOOZED"],
         },
+      },
+      orderBy: {
+        lastMessageAt: "desc",
       },
     });
 

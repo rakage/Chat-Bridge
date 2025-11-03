@@ -42,6 +42,12 @@ export async function GET(req: NextRequest) {
       where: {
         widgetConfigId: widgetConfig.id,
         psid: sessionId,
+        status: {
+          in: ["OPEN", "SNOOZED"],
+        },
+      },
+      orderBy: {
+        lastMessageAt: "desc",
       },
       include: {
         messages: {
@@ -96,6 +102,12 @@ export async function POST(req: NextRequest) {
       where: {
         widgetConfigId: widgetConfig.id,
         psid: sessionId,
+        status: {
+          in: ["OPEN", "SNOOZED"],
+        },
+      },
+      orderBy: {
+        lastMessageAt: "desc",
       },
     });
 

@@ -6,6 +6,7 @@ import { useSocket } from "@/hooks/useSocket";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -37,9 +38,13 @@ import {
   Image as ImageIcon,
   X,
   Paperclip,
+  Zap,
+  XCircle,
 } from "lucide-react";
 import CustomerInfoSidebar from "./CustomerInfoSidebar";
 import CreateTicketModal from "@/components/freshdesk/CreateTicketModal";
+import CannedResponseDropdown, { CannedResponse } from "./CannedResponseDropdown";
+import { replaceVariables, VariableContext } from "@/lib/canned-response-variables";
 
 interface Message {
   id: string;
@@ -124,8 +129,16 @@ export default function ConversationView({
   const [error, setError] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [createTicketModalOpen, setCreateTicketModalOpen] = useState(false);
+  const [showCloseConfirmDialog, setShowCloseConfirmDialog] = useState(false);
+  const [closingChat, setClosingChat] = useState(false);
   const [isCustomerOnline, setIsCustomerOnline] = useState<boolean | null>(null);
   const [profilePhotoError, setProfilePhotoError] = useState(false);
+  
+  // Canned responses states
+  const [showCannedDropdown, setShowCannedDropdown] = useState(false);
+  const [cannedSearchQuery, setCannedSearchQuery] = useState("");
+  const [cannedTriggerPosition, setCannedTriggerPosition] = useState<{ top: number; left: number } | undefined>();
+  const messageInputRef = useRef<HTMLTextAreaElement>(null);
   
   // Image attachment states
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
@@ -759,6 +772,49 @@ export default function ConversationView({
     }
   };
 
+  const handleCloseChat = async () => {
+    if (!conversation?.id) return;
+
+    setClosingChat(true);
+    try {
+      const response = await fetch(`/api/conversations/${conversation.id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          action: "close",
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to close conversation");
+      }
+
+      const data = await response.json();
+
+      // Update conversation status
+      setConversation((prev) =>
+        prev ? { ...prev, status: "CLOSED" } : null
+      );
+
+      // Close the dialog
+      setShowCloseConfirmDialog(false);
+
+      // Emit socket event to notify other clients
+      if (socket && isConnected) {
+        socket.emit("conversation:closed", {
+          conversationId: conversation.id,
+        });
+      }
+    } catch (error) {
+      console.error("Error closing chat:", error);
+      setError("Failed to close chat. Please try again.");
+    } finally {
+      setClosingChat(false);
+    }
+  };
+
   // Handle image selection
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -919,8 +975,83 @@ export default function ConversationView({
     }
   };
 
+  // Handle canned response selection
+  const handleCannedResponseSelect = async (response: CannedResponse) => {
+    // Build variable context
+    const context: VariableContext = {
+      customerName: conversation?.customerName || conversation?.customerProfile?.fullName,
+      customerEmail: conversation?.customerEmail || undefined,
+      customerPhone: conversation?.customerPhone || undefined,
+      platform: conversation?.platform,
+      agentName: session?.user?.name || undefined,
+    };
+
+    // Replace variables in content
+    const processedContent = replaceVariables(response.content, context);
+
+    // Replace the /shortcut in the message with the processed content
+    const words = newMessage.split(" ");
+    const lastWord = words.pop() || "";
+    if (lastWord.startsWith("/")) {
+      words.push(processedContent);
+      setNewMessage(words.join(" "));
+    } else {
+      setNewMessage(newMessage + " " + processedContent);
+    }
+
+    // Close dropdown
+    setShowCannedDropdown(false);
+
+    // Focus back on input
+    messageInputRef.current?.focus();
+
+    // Auto-resize textarea
+    if (messageInputRef.current) {
+      messageInputRef.current.style.height = 'auto';
+      messageInputRef.current.style.height = Math.min(messageInputRef.current.scrollHeight, 200) + 'px';
+    }
+
+    // Increment usage count
+    try {
+      await fetch(`/api/canned-responses/${response.id}/increment-usage`, {
+        method: "POST",
+      });
+    } catch (error) {
+      console.error("Failed to increment usage count:", error);
+    }
+  };
+
+  // Handle keyboard shortcuts
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // Enter to send (without Shift)
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+    // Shift+Enter or Ctrl+Enter for new line (default textarea behavior)
+  };
+
   const handleTyping = (value: string) => {
     setNewMessage(value);
+
+    // Auto-resize textarea
+    if (messageInputRef.current) {
+      messageInputRef.current.style.height = 'auto';
+      messageInputRef.current.style.height = Math.min(messageInputRef.current.scrollHeight, 200) + 'px';
+    }
+
+    // Detect canned response trigger "/"
+    const lastWord = value.split(" ").pop() || "";
+    if (lastWord.startsWith("/") && lastWord.length > 1) {
+      const searchQuery = lastWord.substring(1); // Remove the "/"
+      setCannedSearchQuery(searchQuery);
+      setShowCannedDropdown(true);
+    } else if (lastWord === "/") {
+      setCannedSearchQuery("");
+      setShowCannedDropdown(true);
+    } else {
+      setShowCannedDropdown(false);
+    }
 
     // Clear existing timeout
     if (typingTimeoutRef.current) {
@@ -1209,7 +1340,11 @@ export default function ConversationView({
               </div>
               <Badge
                 variant={
-                  conversation?.status === "OPEN" ? "default" : "secondary"
+                  conversation?.status === "OPEN" 
+                    ? "default" 
+                    : conversation?.status === "CLOSED" 
+                    ? "destructive" 
+                    : "secondary"
                 }
               >
                 {conversation?.status}
@@ -1232,13 +1367,24 @@ export default function ConversationView({
                 <Ticket className="h-4 w-4" />
                 Create Ticket
               </Button>
+              {conversation?.status !== "CLOSED" && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowCloseConfirmDialog(true)}
+                  className="flex items-center gap-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+                >
+                  <XCircle className="h-4 w-4" />
+                  Close Chat
+                </Button>
+              )}
             </div>
           </div>
         </CardHeader>
 
-        <CardContent className="flex-1 flex flex-col p-0">
+        <CardContent className="flex-1 flex flex-col p-0 min-h-0">
           {/* Messages */}
-          <ScrollArea ref={messagesContainerRef} className="flex-1 max-h-[400px] p-4">
+          <ScrollArea ref={messagesContainerRef} className="flex-1 max-h-[400px] p-4 overflow-y-auto">
             {/* Load More button and status indicators */}
             {messages.length > 0 && (
               <div className="mb-4">
@@ -1403,9 +1549,22 @@ export default function ConversationView({
           </ScrollArea>
 
           {/* Message input */}
-          <div className="border-t p-4">
+          <div className="border-t p-4 flex-shrink-0">
+            {/* Closed Conversation Warning */}
+            {conversation?.status === "CLOSED" && (
+              <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2">
+                <XCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-red-900">This conversation has been closed</p>
+                  <p className="text-xs text-red-700 mt-1">
+                    You cannot send messages to closed conversations. If the customer sends a new message, a new conversation will be created automatically.
+                  </p>
+                </div>
+              </div>
+            )}
+
             {/* Image Preview */}
-            {imagePreview && (
+            {imagePreview && conversation?.status !== "CLOSED" && (
               <div className="mb-3 relative inline-block">
                 <img 
                   src={imagePreview} 
@@ -1422,39 +1581,82 @@ export default function ConversationView({
               </div>
             )}
             
-            <div className="flex space-x-2">
-              {/* Image Upload Button */}
-              <input
-                type="file"
-                id="image-upload"
-                accept={conversation?.platform === "INSTAGRAM" 
-                  ? "image/jpeg,image/jpg,image/png,image/gif"
-                  : "image/jpeg,image/jpg,image/png,image/webp,image/gif"}
-                onChange={handleImageSelect}
-                className="hidden"
-              />
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => document.getElementById('image-upload')?.click()}
-                disabled={!isConnected || uploadingImage}
-                title="Attach image"
-              >
-                <Paperclip className="h-4 w-4" />
-              </Button>
+            <div className="relative flex flex-col sm:flex-row items-stretch sm:items-end gap-2 w-full min-h-[48px]">
+              {/* Canned Response Dropdown */}
+              {showCannedDropdown && conversation?.status !== "CLOSED" && (
+                <div className="absolute bottom-full mb-2 left-0 right-0 z-50 w-full">
+                  <CannedResponseDropdown
+                    searchQuery={cannedSearchQuery}
+                    onSelect={handleCannedResponseSelect}
+                    onClose={() => setShowCannedDropdown(false)}
+                  />
+                </div>
+              )}
               
-              <Input
+              {/* Top row: Action buttons */}
+              <div className="flex items-center gap-2 sm:gap-0 sm:contents">
+                {/* Image Upload Button */}
+                <input
+                  type="file"
+                  id="image-upload"
+                  accept={conversation?.platform === "INSTAGRAM" 
+                    ? "image/jpeg,image/jpg,image/png,image/gif"
+                    : "image/jpeg,image/jpg,image/png,image/webp,image/gif"}
+                  onChange={handleImageSelect}
+                  className="hidden"
+                  disabled={conversation?.status === "CLOSED"}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => document.getElementById('image-upload')?.click()}
+                  disabled={!isConnected || uploadingImage || conversation?.status === "CLOSED"}
+                  title={conversation?.status === "CLOSED" ? "Cannot attach to closed conversation" : "Attach image"}
+                  className="flex-shrink-0"
+                >
+                  <Paperclip className="h-4 w-4" />
+                </Button>
+                
+                {/* Canned Responses Button */}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setShowCannedDropdown(!showCannedDropdown);
+                    setCannedSearchQuery("");
+                  }}
+                  disabled={!isConnected || uploadingImage || conversation?.status === "CLOSED"}
+                  title={conversation?.status === "CLOSED" ? "Cannot use canned responses on closed conversation" : "Canned responses"}
+                  className="flex-shrink-0"
+                >
+                  <Zap className="h-4 w-4" />
+                </Button>
+              </div>
+              
+              {/* Textarea - grows to fill available space */}
+              <Textarea
+                ref={messageInputRef}
                 value={newMessage}
                 onChange={(e) => handleTyping(e.target.value)}
-                placeholder="Type a message..."
-                onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && sendMessage()}
-                disabled={!isConnected || uploadingImage}
+                onKeyDown={handleKeyDown}
+                placeholder={
+                  conversation?.status === "CLOSED" 
+                    ? "This conversation is closed. Cannot send messages." 
+                    : "Type a message... (Shift+Enter for new line)"
+                }
+                disabled={!isConnected || uploadingImage || conversation?.status === "CLOSED"}
+                className="min-h-[40px] max-h-[200px] resize-none w-full sm:flex-1"
+                rows={1}
               />
+              
+              {/* Send Button */}
               <Button
                 onClick={sendMessage}
-                disabled={(!newMessage.trim() && !selectedImage) || !isConnected || uploadingImage}
+                disabled={(!newMessage.trim() && !selectedImage) || !isConnected || uploadingImage || conversation?.status === "CLOSED"}
                 size="sm"
+                className="flex-shrink-0 w-full sm:w-auto"
               >
                 {uploadingImage ? (
                   <RefreshCw className="h-4 w-4 animate-spin" />
@@ -1530,6 +1732,44 @@ export default function ConversationView({
           <AlertDialogFooter>
             <AlertDialogAction onClick={() => setImageValidationError(null)}>
               OK
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Close Chat Confirmation Dialog */}
+      <AlertDialog open={showCloseConfirmDialog} onOpenChange={setShowCloseConfirmDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Close this conversation?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will mark the conversation as closed. If the customer sends another message, a new conversation will be created automatically.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowCloseConfirmDialog(false)}
+              disabled={closingChat}
+            >
+              Cancel
+            </Button>
+            <AlertDialogAction
+              onClick={handleCloseChat}
+              disabled={closingChat}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {closingChat ? (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  Closing...
+                </>
+              ) : (
+                <>
+                  <XCircle className="h-4 w-4 mr-2" />
+                  Close Chat
+                </>
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

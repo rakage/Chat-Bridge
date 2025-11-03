@@ -16,6 +16,7 @@ import {
   Play,
   ChevronUp,
   User2,
+  Zap,
 } from "lucide-react";
 
 import {
@@ -50,6 +51,12 @@ const navigation = [
     name: "Conversations",
     href: "/dashboard/conversations",
     icon: MessageSquare,
+    roles: ["OWNER", "ADMIN", "AGENT"],
+  },
+  {
+    name: "Canned Responses",
+    href: "/dashboard/canned-responses",
+    icon: Zap,
     roles: ["OWNER", "ADMIN", "AGENT"],
   },
   {
