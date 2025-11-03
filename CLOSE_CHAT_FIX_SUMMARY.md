@@ -56,7 +56,45 @@ if (existingPsidSuffix === newPsidSuffix) {
 
 ## Fixes Applied
 
-### Fix 1: Conditional lastMessageAt Update (Facebook)
+### Fix 1: Strict Duplicate Check Excludes CLOSED (Instagram)
+**File:** `src/lib/instagram-conversation-helper.ts`
+
+**Problem:** The "strict duplicate prevention" logic at the end of the conversation lookup was checking ALL conversations, including CLOSED ones. This would find the closed conversation and return it instead of creating a new one.
+
+**Before:**
+```typescript
+// STRICT DUPLICATE PREVENTION
+const strictCheck = await db.conversation.findMany({
+  where: {
+    instagramConnectionId: instagramConnectionId,
+    platform: 'INSTAGRAM'
+    // ❌ No status filter - finds CLOSED conversations!
+  }
+});
+```
+
+**After:**
+```typescript
+// STRICT DUPLICATE PREVENTION - only check OPEN/SNOOZED
+const strictCheck = await db.conversation.findMany({
+  where: {
+    instagramConnectionId: instagramConnectionId,
+    platform: 'INSTAGRAM',
+    status: {
+      in: ["OPEN", "SNOOZED"], // ✅ Excludes CLOSED
+    },
+  }
+});
+
+// Added success message
+if (!matchingSuffix) {
+  console.log(`✅ STRICT CHECK PASSED: No OPEN/SNOOZED conversation, safe to create new`);
+}
+```
+
+---
+
+### Fix 2: Conditional lastMessageAt Update (Facebook)
 **File:** `src/lib/queue.ts` (3 locations)
 
 **Before:**
@@ -86,7 +124,7 @@ if (conversation.status !== "CLOSED") {
 
 ---
 
-### Fix 2: Skip CLOSED Conversations in PSID Matching (Instagram)
+### Fix 3: Skip CLOSED Conversations in PSID Matching (Instagram)
 **File:** `src/lib/instagram-conversation-helper.ts` (2 locations)
 
 **Location 1 - PSID Suffix Match:**
@@ -448,11 +486,14 @@ if (existingPsidSuffix === newPsidSuffix) {
 ## Summary
 
 ### Files Modified:
-1. `src/lib/queue.ts` - 3 locations (conditional lastMessageAt update)
-2. `src/lib/instagram-conversation-helper.ts` - 2 locations (skip CLOSED in matching)
+1. `src/lib/instagram-conversation-helper.ts`
+   - 1 location: Added status filter to strict duplicate check
+   - 2 locations: Skip CLOSED in PSID/username matching
+2. `src/lib/queue.ts`
+   - 3 locations: Conditional lastMessageAt update
 
 ### Lines Changed:
-- Total: ~12 lines added
+- Total: ~20 lines added/modified
 - Impact: Critical bug fix
 
 ### Build Status:

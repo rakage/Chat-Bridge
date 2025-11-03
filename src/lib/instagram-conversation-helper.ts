@@ -171,12 +171,15 @@ export async function getOrCreateInstagramConversation(
     
     console.log(`📝 No existing conversation found, will create new one...`);
 
-    // STRICT DUPLICATE PREVENTION: Check one more time for any conversation with same PSID suffix
-    console.log(`🛑 STRICT CHECK: Verifying no conversation exists with PSID suffix ${customerIGSID.slice(-4)}`);
+    // STRICT DUPLICATE PREVENTION: Check one more time for any OPEN/SNOOZED conversation with same PSID suffix
+    console.log(`🛑 STRICT CHECK: Verifying no OPEN/SNOOZED conversation exists with PSID suffix ${customerIGSID.slice(-4)}`);
     const strictCheck = await db.conversation.findMany({
       where: {
         instagramConnectionId: instagramConnectionId,
-        platform: 'INSTAGRAM'
+        platform: 'INSTAGRAM',
+        status: {
+          in: ["OPEN", "SNOOZED"], // Only check non-closed conversations
+        },
       }
     });
     
@@ -185,7 +188,7 @@ export async function getOrCreateInstagramConversation(
     );
     
     if (matchingSuffix) {
-      console.log(`🚫 STRICT PREVENTION: Found conversation ${matchingSuffix.id} with matching suffix. REFUSING to create duplicate.`);
+      console.log(`🚫 STRICT PREVENTION: Found OPEN/SNOOZED conversation ${matchingSuffix.id} with matching suffix. REFUSING to create duplicate.`);
       console.log(`   Existing: ${matchingSuffix.psid} (${matchingSuffix.psid?.slice(-4)})`);
       console.log(`   New: ${customerIGSID} (${customerIGSID.slice(-4)})`);
       console.log(`   🔄 Returning existing conversation instead`);
@@ -199,6 +202,10 @@ export async function getOrCreateInstagramConversation(
         }
       });
     }
+    
+    // If we get here, no OPEN/SNOOZED conversation found (CLOSED ones are OK to duplicate)
+    console.log(`✅ STRICT CHECK PASSED: No OPEN/SNOOZED conversation with suffix ${customerIGSID.slice(-4)}, safe to create new`);
+    
 
     // If not found by PSID, try to get customer profile and look for existing conversations
     // by customer identity (username) to handle PSID mismatches
