@@ -18,9 +18,10 @@ export async function GET(request: NextRequest) {
     const offset = parseInt(searchParams.get("offset") || "0");
 
     // Build where clause based on user's company access
+    // ALL users (including OWNERs) should only see conversations from their current company
     let whereClause: any = {};
 
-    if (session.user.companyId && session.user.role !== "OWNER") {
+    if (session.user.companyId) {
       whereClause.OR = [
         {
           pageConnection: {
