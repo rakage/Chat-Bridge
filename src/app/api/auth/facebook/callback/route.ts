@@ -121,9 +121,40 @@ export async function GET(request: NextRequest) {
             console.log(`🔐 Encrypting tokens for page ${pageData.id}`);
             const encryptedPageToken = await encrypt(longLivedToken);
             const encryptedVerifyToken = await encrypt(verifyToken);
+
+            console.log(`💾 Saving page connection for ${pageData.id}`);
+            console.log(`🏢 User's current company: ${session.user.companyId}`);
+            console.log(`📱 Facebook Page ID: ${pageData.id}`);
+
+            // Check if this Facebook page is already connected to another company
+            const existingPageConnection = await db.pageConnection.findFirst({
+              where: {
+                pageId: pageData.id,
+                NOT: {
+                  companyId: session.user.companyId || undefined, // Different company
+                },
+              },
+              select: {
+                id: true,
+                companyId: true,
+                pageName: true,
+              },
+            });
+
+            if (existingPageConnection) {
+              console.error(`❌ Facebook page ${pageData.name} (ID: ${pageData.id}) is already connected to another company (${existingPageConnection.companyId})`);
+              console.error(`❌ Current user's company: ${session.user.companyId}`);
+              errors.push({
+                pageId: pageData.id,
+                pageName: pageData.name,
+                error: "This Facebook page is already connected to another company",
+              });
+              continue; // Skip this page and continue with others
+            }
+
+            console.log(`✅ No duplicate found, proceeding to save...`);
             
             // Create or update page connection
-            console.log(`💾 Saving page connection for ${pageData.id}`);
             const pageConnection = await db.pageConnection.upsert({
               where: { pageId: pageData.id },
               create: {
