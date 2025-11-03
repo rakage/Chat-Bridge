@@ -59,6 +59,29 @@ export async function POST(request: NextRequest) {
 
     console.log(`✅ Bot validated: @${botInfo.username} (${botInfo.first_name})`);
 
+    // Check if this Telegram bot is already connected to another company
+    const existingConnection = await db.telegramConnection.findFirst({
+      where: {
+        botId: botId,
+        NOT: {
+          companyId: session.user.companyId || undefined, // Different company
+        },
+        isActive: true,
+      },
+      select: {
+        id: true,
+        companyId: true,
+      },
+    });
+
+    if (existingConnection) {
+      console.error(`❌ Telegram bot @${botInfo.username} is already connected to another company`);
+      return NextResponse.json(
+        { error: "This Telegram bot is already connected to another company" },
+        { status: 400 }
+      );
+    }
+
     // Set up webhook
     const webhookUrl = `${process.env.NEXTAUTH_URL}/api/webhook/telegram`;
     console.log(`📡 Setting webhook to: ${webhookUrl}`);

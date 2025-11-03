@@ -13,6 +13,7 @@ import {
   Settings,
   LogOut,
   Slash,
+  RefreshCw,
 } from "lucide-react";
 import { CompanyModal } from "@/components/company/CompanyModal";
 
@@ -56,14 +57,71 @@ const getPageTitle = (pathname: string) => {
   return breadcrumbs.length > 0 ? breadcrumbs : ["Overview"];
 };
 
+interface UserCompany {
+  id: string;
+  name: string;
+  role: string;
+  isCurrent: boolean;
+}
+
 export default function Header() {
-  const { data: session } = useSession();
+  const { data: session, update } = useSession();
   const pathname = usePathname();
   const [showDropdown, setShowDropdown] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showCompanyModal, setShowCompanyModal] = useState(false);
+  const [userCompanies, setUserCompanies] = useState<UserCompany[]>([]);
+  const [loadingCompanies, setLoadingCompanies] = useState(false);
+  const [switchingCompany, setSwitchingCompany] = useState(false);
 
   const breadcrumbs = getPageTitle(pathname);
+
+  // Fetch user's companies when dropdown opens
+  const fetchUserCompanies = async () => {
+    if (userCompanies.length > 0) return; // Already loaded
+    
+    setLoadingCompanies(true);
+    try {
+      const response = await fetch("/api/companies/list");
+      if (response.ok) {
+        const data = await response.json();
+        setUserCompanies(data.companies || []);
+      }
+    } catch (error) {
+      console.error("Failed to fetch companies:", error);
+    } finally {
+      setLoadingCompanies(false);
+    }
+  };
+
+  const handleSwitchCompany = async (companyId: string) => {
+    setSwitchingCompany(true);
+    try {
+      const response = await fetch("/api/companies/switch", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ companyId }),
+      });
+
+      if (response.ok) {
+        // Update session
+        await update();
+        // Reload the page to refresh all data
+        window.location.reload();
+      } else {
+        const error = await response.json();
+        console.error("Failed to switch company:", error);
+        alert(error.error || "Failed to switch company");
+      }
+    } catch (error) {
+      console.error("Error switching company:", error);
+      alert("Failed to switch company");
+    } finally {
+      setSwitchingCompany(false);
+    }
+  };
 
   const handleLogout = async () => {
     setShowUserMenu(false);
@@ -90,7 +148,12 @@ export default function Header() {
         <div className="flex items-center gap-2 min-w-0 flex-1">
           <div className="relative flex-shrink-0">
             <button
-              onClick={() => setShowDropdown(!showDropdown)}
+              onClick={() => {
+                setShowDropdown(!showDropdown);
+                if (!showDropdown) {
+                  fetchUserCompanies();
+                }
+              }}
               className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm text-gray-600 hover:text-gray-900 cursor-pointer"
             >
               <span className="truncate max-w-[120px] sm:max-w-none">{companyName}</span>
@@ -119,8 +182,50 @@ export default function Header() {
                   }}
                 >
                   <div className="space-y-4">
-                    {/* Current Company */}
-                    {session?.user?.companyName && (
+                    {/* Companies List */}
+                    {loadingCompanies ? (
+                      <div className="flex items-center justify-center py-4">
+                        <RefreshCw className="w-4 h-4 animate-spin text-gray-400 mr-2" />
+                        <span className="text-sm text-gray-500">Loading companies...</span>
+                      </div>
+                    ) : userCompanies.length > 0 ? (
+                      <div className="space-y-1">
+                        <p className="text-xs font-medium text-gray-500 px-2 mb-2">Your Companies</p>
+                        {userCompanies.map((company) => (
+                          <button
+                            key={company.id}
+                            onClick={() => {
+                              if (!company.isCurrent && !switchingCompany) {
+                                handleSwitchCompany(company.id);
+                              }
+                            }}
+                            disabled={company.isCurrent || switchingCompany}
+                            className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
+                              company.isCurrent
+                                ? "bg-gray-50 cursor-default"
+                                : "hover:bg-gray-50 cursor-pointer"
+                            } ${switchingCompany ? "opacity-50" : ""}`}
+                          >
+                            <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center flex-shrink-0">
+                              <span className="text-white text-xs font-medium">
+                                {company.name.charAt(0)}
+                              </span>
+                            </div>
+                            <div className="flex-1 min-w-0 text-left">
+                              <p className="text-sm font-medium text-gray-900 truncate">
+                                {company.name}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {company.isCurrent ? "Current" : company.role}
+                              </p>
+                            </div>
+                            {company.isCurrent && (
+                              <div className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0" />
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    ) : session?.user?.companyName && (
                       <div className="py-2">
                         <div className="flex items-center gap-3 px-3 py-2 bg-gray-50 rounded-lg">
                           <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center flex-shrink-0">
@@ -138,7 +243,7 @@ export default function Header() {
                       </div>
                     )}
 
-                    {/* Create or Join Button */}
+                    {/* Create or Join Button - Always show */}
                     <Button
                       onClick={handleCreateOrJoinCompany}
                       className="w-full h-10 bg-gray-100 text-gray-700 hover:bg-gray-200 border-0 justify-start"

@@ -27,23 +27,6 @@ export async function POST(request: NextRequest) {
       return rateLimitResult;
     }
 
-    // Check if user already has a company
-    const userWithCompany = await db.user.findUnique({
-      where: { id: session.user.id },
-      include: { company: true },
-    });
-
-    if (!userWithCompany) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
-
-    if (userWithCompany.companyId) {
-      return NextResponse.json(
-        { error: "User already belongs to a company" },
-        { status: 400 }
-      );
-    }
-
     // Validate request body
     const body = await request.json();
     const { companyId } = joinCompanySchema.parse(body);
@@ -60,17 +43,30 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Update user to join this company
-    await db.user.update({
-      where: { id: session.user.id },
-      data: {
-        companyId: company.id,
-        role: "AGENT", // Users who join a company start as AGENT
-      },
+    // Join the company in a transaction
+    await db.$transaction(async (tx) => {
+      // Create CompanyMember with MEMBER role
+      await tx.companyMember.create({
+        data: {
+          userId: session.user.id,
+          companyId: company.id,
+          role: "MEMBER",
+        },
+      });
+
+      // Update user to set this as current company (and legacy companyId for backward compatibility)
+      await tx.user.update({
+        where: { id: session.user.id },
+        data: {
+          companyId: company.id, // Legacy field
+          currentCompanyId: company.id,
+          role: "AGENT", // Users who join a company start as AGENT
+        },
+      });
     });
 
     console.log(
-      `✅ User ${session.user.email} joined company: ${company.name} (ID: ${company.id})`
+      `✅ User ${session.user.email} joined company: ${company.name} (ID: ${company.id}) with MEMBER role`
     );
 
     return createRateLimitResponse(
@@ -79,6 +75,7 @@ export async function POST(request: NextRequest) {
         company: {
           id: company.id,
           name: company.name,
+          role: "MEMBER",
         },
       },
       rateLimitResult

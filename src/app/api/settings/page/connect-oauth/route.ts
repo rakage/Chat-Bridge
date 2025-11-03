@@ -80,6 +80,30 @@ export async function POST(request: NextRequest) {
           console.warn(`⚠️ Could not fetch profile picture for page ${pageData.id}:`, profileError);
         }
 
+        // Check if this Facebook page is already connected to another company
+        const existingPageConnection = await db.pageConnection.findFirst({
+          where: {
+            pageId: pageData.id,
+            NOT: {
+              companyId: session.user.companyId || undefined, // Different company
+            },
+          },
+          select: {
+            id: true,
+            companyId: true,
+          },
+        });
+
+        if (existingPageConnection) {
+          console.error(`❌ Facebook page ${pageData.name} is already connected to another company`);
+          errors.push({
+            pageId: pageData.id,
+            pageName: pageData.name,
+            error: "This Facebook page is already connected to another company",
+          });
+          continue; // Skip this page and continue with others
+        }
+
         // Encrypt tokens
         console.log(`🔐 Encrypting tokens for page ${pageData.id}`);
         const encryptedPageToken = await encrypt(longLivedToken);

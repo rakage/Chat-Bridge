@@ -27,42 +27,28 @@ export async function POST(request: NextRequest) {
 
     console.log(`💾 Saving Instagram connection for user ${session.user.id}: @${userProfile.username}`);
 
-    // Here you would typically save to your database
-    // For now, we'll use a simple file-based storage or in-memory solution
-    // In a real app, you'd use Prisma/database:
-    /*
-    const instagramConnection = await prisma.instagramConnection.upsert({
-      where: { 
-        userId_companyId: {
-          userId: session.user.id,
-          companyId: session.user.companyId!
-        }
-      },
-      update: {
+    // Check if this Instagram account is already connected to another company
+    const existingConnection = await db.instagramConnection.findFirst({
+      where: {
         instagramUserId: userProfile.id,
-        username: userProfile.username,
-        accessToken: await encrypt(accessToken), // Encrypt the token
-        profileData: userProfile,
-        mediaCount: mediaCount || 0,
-        conversationsCount: conversationsCount || 0,
-        messagingEnabled: messagingEnabled || false,
+        NOT: {
+          companyId: session.user.companyId || undefined, // Different company
+        },
         isActive: true,
-        updatedAt: new Date(),
       },
-      create: {
-        userId: session.user.id,
-        companyId: session.user.companyId!,
-        instagramUserId: userProfile.id,
-        username: userProfile.username,
-        accessToken: await encrypt(accessToken), // Encrypt the token
-        profileData: userProfile,
-        mediaCount: mediaCount || 0,
-        conversationsCount: conversationsCount || 0,
-        messagingEnabled: messagingEnabled || false,
-        isActive: true,
-      }
+      select: {
+        id: true,
+        companyId: true,
+      },
     });
-    */
+
+    if (existingConnection) {
+      console.error(`❌ Instagram account @${userProfile.username} is already connected to another company`);
+      return NextResponse.json(
+        { error: "This Instagram account is already connected to another company" },
+        { status: 400 }
+      );
+    }
 
     // Save to database using Prisma (upsert to handle updates)
     const instagramConnection = await db.instagramConnection.upsert({

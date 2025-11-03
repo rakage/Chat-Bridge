@@ -16,50 +16,49 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Check if user already has a company
-    const userWithCompany = await db.user.findUnique({
-      where: { id: session.user.id },
-      include: { company: true },
-    });
-
-    if (!userWithCompany) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
-
-    if (userWithCompany.companyId) {
-      return NextResponse.json(
-        { error: "User already belongs to a company" },
-        { status: 400 }
-      );
-    }
-
     // Validate request body
     const body = await request.json();
     const { name } = createCompanySchema.parse(body);
 
-    // Create the company
-    const company = await db.company.create({
-      data: {
-        name: name.trim(),
-      },
+    // Create the company and company membership in a transaction
+    const result = await db.$transaction(async (tx) => {
+      // Create the company
+      const company = await tx.company.create({
+        data: {
+          name: name.trim(),
+        },
+      });
+
+      // Create CompanyMember with OWNER role
+      await tx.companyMember.create({
+        data: {
+          userId: session.user.id,
+          companyId: company.id,
+          role: "OWNER",
+        },
+      });
+
+      // Update user to set this as current company (and legacy companyId for backward compatibility)
+      await tx.user.update({
+        where: { id: session.user.id },
+        data: {
+          companyId: company.id, // Legacy field
+          currentCompanyId: company.id,
+        },
+      });
+
+      return company;
     });
 
-    // Update user to be assigned to this company
-    await db.user.update({
-      where: { id: session.user.id },
-      data: {
-        companyId: company.id,
-      },
-    });
-
-    console.log(`✅ Company created: ${company.name} (ID: ${company.id}) by user ${session.user.email}`);
+    console.log(`✅ Company created: ${result.name} (ID: ${result.id}) by user ${session.user.email} with OWNER role`);
 
     return NextResponse.json({
       success: true,
       company: {
-        id: company.id,
-        name: company.name,
-        createdAt: company.createdAt,
+        id: result.id,
+        name: result.name,
+        createdAt: result.createdAt,
+        role: "OWNER",
       },
     });
   } catch (error) {
