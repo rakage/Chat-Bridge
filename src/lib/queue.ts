@@ -1308,12 +1308,17 @@ export async function processIncomingMessageDirect(
     });
 
     // Find or create conversation using the database ID, not Facebook pageId
-    let conversation = await db.conversation.findUnique({
+    // Changed from findUnique to findFirst to support multiple conversations per PSID (for CLOSED)
+    let conversation = await db.conversation.findFirst({
       where: {
-        pageConnectionId_psid: {
-          pageConnectionId: pageConnection.id, // Use database ID, not Facebook pageId
-          psid: senderId,
+        pageConnectionId: pageConnection.id, // Use database ID, not Facebook pageId
+        psid: senderId,
+        status: {
+          in: ["OPEN", "SNOOZED"], // Only find active conversations
         },
+      },
+      orderBy: {
+        lastMessageAt: "desc", // Get most recent if multiple exist
       },
     });
 

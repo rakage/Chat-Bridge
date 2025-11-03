@@ -357,12 +357,16 @@ export async function POST(request: NextRequest) {
             continue;
           }
           
-          const conversation = await db.conversation.findUnique({
+          const conversation = await db.conversation.findFirst({
             where: {
-              pageConnectionId_psid: {
-                pageConnectionId: pageConnection.id,
-                psid: messagingEvent.sender.id,
+              pageConnectionId: pageConnection.id,
+              psid: messagingEvent.sender.id,
+              status: {
+                in: ["OPEN", "SNOOZED"], // Only find active conversations
               },
+            },
+            orderBy: {
+              lastMessageAt: "desc",
             },
           });
 

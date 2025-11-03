@@ -398,14 +398,18 @@ export async function getOrCreateInstagramConversation(
       // If creation fails due to unique constraint (race condition), find the existing one
       if (createError.code === 'P2002') {
         console.log(`⚠️ Race condition detected! Another process created conversation for PSID ${customerIGSID}`);
-        console.log(`🔍 Looking for the conversation that was just created...`);
+        console.log(`🔍 Looking for the OPEN/SNOOZED conversation that was just created...`);
         
-        const existingConversation = await db.conversation.findUnique({
+        const existingConversation = await db.conversation.findFirst({
           where: {
-            instagramConnectionId_psid: {
-              instagramConnectionId: instagramConnectionId,
-              psid: customerIGSID,
+            instagramConnectionId: instagramConnectionId,
+            psid: customerIGSID,
+            status: {
+              in: ["OPEN", "SNOOZED"], // Find the new conversation, not CLOSED ones
             },
+          },
+          orderBy: {
+            createdAt: "desc", // Get the most recent one
           },
           include: {
             instagramConnection: {

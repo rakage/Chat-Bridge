@@ -185,10 +185,17 @@ model Conversation {
   telegramConnection    TelegramConnection?  @relation(fields: [telegramConnectionId], references: [id], onDelete: Cascade)
   widgetConfig          WidgetConfig?        @relation(fields: [widgetConfigId], references: [id], onDelete: Cascade)
 
-  @@unique([pageConnectionId, psid])
-  @@unique([instagramConnectionId, psid])
-  @@unique([telegramConnectionId, psid])
-  @@unique([widgetConfigId, psid])
+  // Removed unique constraints to allow multiple conversations per PSID
+  // when status is CLOSED. Duplicate prevention for OPEN/SNOOZED is handled in code.
+  // @@unique([pageConnectionId, psid])
+  // @@unique([instagramConnectionId, psid])
+  // @@unique([telegramConnectionId, psid])
+  // @@unique([widgetConfigId, psid])
+  
+  @@index([pageConnectionId, psid, status])
+  @@index([instagramConnectionId, psid, status])
+  @@index([telegramConnectionId, psid, status])
+  @@index([widgetConfigId, psid, status])
   @@index([pageConnectionId, status, lastMessageAt])
   @@index([instagramConnectionId, status, lastMessageAt])
   @@index([telegramConnectionId, status, lastMessageAt])
