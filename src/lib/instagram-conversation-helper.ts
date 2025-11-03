@@ -124,6 +124,12 @@ export async function getOrCreateInstagramConversation(
       
       // If the PSID suffixes match, this is likely the same user
       if (existingPsidSuffix && newPsidSuffix && existingPsidSuffix === newPsidSuffix) {
+        // Check if existing conversation is CLOSED
+        if (existingConv.status === "CLOSED") {
+          console.log(`📍 Found matching PSID but conversation is CLOSED. Will create new conversation.`);
+          continue; // Skip this conversation, will create new one
+        }
+        
         console.log(`📍 Found matching PSID suffix! Updating existing conversation ${existingConv.id}`);
         
         // Update the existing conversation with the new PSID
@@ -228,6 +234,12 @@ export async function getOrCreateInstagramConversation(
             const existingProfile = existingMeta?.customerProfile;
             
             if (existingProfile?.username === customerProfile.username) {
+              // Check if existing conversation is CLOSED
+              if (existingConv.status === "CLOSED") {
+                console.log(`📍 Found matching username @${customerProfile.username} but conversation is CLOSED. Will create new conversation.`);
+                continue; // Skip this conversation, will create new one
+              }
+              
               console.log(`📍 Found existing conversation for @${customerProfile.username} with different PSID!`);
               console.log(`   Existing PSID: ${existingConv.psid}`);
               console.log(`   New PSID: ${customerIGSID}`);

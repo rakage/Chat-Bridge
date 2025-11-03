@@ -147,6 +147,14 @@ if (!conversation) {
     },
   });
 }
+
+// IMPORTANT: Don't update lastMessageAt for CLOSED conversations
+if (conversation.status !== "CLOSED") {
+  await db.conversation.update({
+    where: { id: conversation.id },
+    data: { lastMessageAt: new Date() },
+  });
+}
 ```
 
 #### Instagram (`src/lib/instagram-conversation-helper.ts`)
@@ -163,6 +171,12 @@ let conversation = await db.conversation.findFirst({
     lastMessageAt: "desc",
   },
 });
+
+// In PSID/username matching logic:
+if (existingConv.status === "CLOSED") {
+  console.log(`Found matching but conversation is CLOSED. Will create new.`);
+  continue; // Skip closed conversations, create new one
+}
 ```
 
 #### Telegram (`src/app/api/webhook/telegram/route.ts`)

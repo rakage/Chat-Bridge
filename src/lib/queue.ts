@@ -368,11 +368,13 @@ export async function initializeWorkers() {
               });
             }
 
-            // Update conversation last message time
-            await db.conversation.update({
-              where: { id: conversation.id },
-              data: { lastMessageAt: new Date() },
-            });
+            // Update conversation last message time (only if not closed)
+            if (conversation.status !== "CLOSED") {
+              await db.conversation.update({
+                where: { id: conversation.id },
+                data: { lastMessageAt: new Date() },
+              });
+            }
 
             // Emit real-time event for new message
             try {
@@ -1433,11 +1435,13 @@ export async function processIncomingMessageDirect(
 
     console.log(`Message saved with ID: ${message.id}`);
 
-    // Update conversation lastMessageAt
-    await db.conversation.update({
-      where: { id: conversation.id },
-      data: { lastMessageAt: new Date() },
-    });
+    // Update conversation lastMessageAt (only if not closed)
+    if (conversation.status !== "CLOSED") {
+      await db.conversation.update({
+        where: { id: conversation.id },
+        data: { lastMessageAt: new Date() },
+      });
+    }
 
     // Emit real-time event for new message
     try {
@@ -1816,10 +1820,13 @@ export async function processInstagramMessageDirect(data: {
       },
     });
 
-    await db.conversation.update({
-      where: { id: conversation.id },
-      data: { lastMessageAt: new Date() },
-    });
+    // Update conversation lastMessageAt (only if not closed)
+    if (conversation.status !== "CLOSED") {
+      await db.conversation.update({
+        where: { id: conversation.id },
+        data: { lastMessageAt: new Date() },
+      });
+    }
 
     // ============================================
     // CRITICAL FIX: Emit socket events regardless of fetch success
