@@ -35,10 +35,15 @@ export default function InstagramSetupPage() {
           window.history.replaceState({}, '', cleanUrl);
           
           // Save Instagram connection data to backend
-          await saveInstagramConnection(data);
+          const saveResult = await saveInstagramConnection(data);
           
-          // Redirect to manage page with success message
-          router.push(`/dashboard/integrations/instagram/manage?instagram_success=true&message=${encodeURIComponent(`Successfully connected Instagram account @${data.userProfile.username}!`)}`);
+          // Only redirect if save was successful
+          if (saveResult.success) {
+            router.push(`/dashboard/integrations/instagram/manage?instagram_success=true&message=${encodeURIComponent(`Successfully connected Instagram account @${data.userProfile.username}!`)}`);
+          } else {
+            // Show error message
+            setError(saveResult.error || "Failed to connect Instagram account");
+          }
         } catch (parseError) {
           console.error("Failed to parse Instagram data:", parseError);
           setError("Failed to process Instagram login data");
@@ -65,10 +70,25 @@ export default function InstagramSetupPage() {
       });
       
       if (!response.ok) {
-        console.error('Failed to save Instagram connection:', await response.text());
+        const errorData = await response.json();
+        console.error('Failed to save Instagram connection:', errorData);
+        return {
+          success: false,
+          error: errorData.error || 'Failed to save Instagram connection'
+        };
       }
+
+      const successData = await response.json();
+      return {
+        success: true,
+        data: successData
+      };
     } catch (error) {
       console.error('Error saving Instagram connection:', error);
+      return {
+        success: false,
+        error: 'Network error while saving Instagram connection'
+      };
     }
   };
 
