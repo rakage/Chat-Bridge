@@ -71,13 +71,20 @@ export async function GET(request: NextRequest) {
       console.log(`💬 Found ${conversations.length} conversations`);
       console.log(`🕐 Long-lived token expires in ${Math.round(longTokenResponse.expires_in / 86400)} days`);
       
-      // Get user's company
+      // Get user's current company (use currentCompanyId for multi-company support)
       const user = await db.user.findUnique({
         where: { id: session.user.id },
-        select: { id: true, companyId: true }
+        select: { 
+          id: true, 
+          companyId: true,           // Legacy field
+          currentCompanyId: true     // New field for company switching
+        }
       });
 
-      if (!user?.companyId) {
+      // Use currentCompanyId if available, fallback to legacy companyId
+      const userCompanyId = user?.currentCompanyId || user?.companyId;
+
+      if (!userCompanyId) {
         console.error("❌ User has no company associated");
         return NextResponse.redirect(
           new URL("/dashboard/integrations?error=Please create or join a company first", baseUrl)
@@ -88,7 +95,7 @@ export async function GET(request: NextRequest) {
       const encryptedToken = await encrypt(longTokenResponse.access_token);
 
       console.log(`💾 Saving Instagram connection for user ${user.id}: @${profile.username}`);
-      console.log(`🏢 User's current company: ${user.companyId}`);
+      console.log(`🏢 User's current company: ${userCompanyId} (currentCompanyId: ${user.currentCompanyId}, legacy companyId: ${user.companyId})`);
       console.log(`📱 Instagram user ID: ${profile.id}`);
 
       // Check if this Instagram account is already connected to another company
@@ -96,7 +103,7 @@ export async function GET(request: NextRequest) {
         where: {
           instagramUserId: profile.id,
           NOT: {
-            companyId: user.companyId || undefined, // Different company
+            companyId: userCompanyId, // Different company
           },
           isActive: true,
         },
@@ -109,7 +116,7 @@ export async function GET(request: NextRequest) {
 
       if (existingConnection) {
         console.error(`❌ Instagram account @${profile.username} (ID: ${profile.id}) is already connected to another company (${existingConnection.companyId})`);
-        console.error(`❌ Current user's company: ${user.companyId}`);
+        console.error(`❌ Current user's company: ${userCompanyId}`);
         return NextResponse.redirect(
           new URL("/dashboard/integrations/instagram/setup?error=" + encodeURIComponent("This Instagram account is already connected to another company"), baseUrl)
         );
@@ -121,7 +128,7 @@ export async function GET(request: NextRequest) {
       const connection = await db.instagramConnection.upsert({
         where: {
           companyId_instagramUserId: {
-            companyId: user.companyId,
+            companyId: userCompanyId,
             instagramUserId: profile.id,
           },
         },
@@ -129,7 +136,7 @@ export async function GET(request: NextRequest) {
           instagramUserId: profile.id,
           username: profile.username,
           accessTokenEnc: encryptedToken,
-          companyId: user.companyId,
+          companyId: userCompanyId,
           profilePictureUrl: profile.profile_picture_url || null,
           accountType: profile.account_type || "BUSINESS",
           mediaCount: profile.media_count || 0,
