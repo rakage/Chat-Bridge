@@ -33,7 +33,6 @@ import {
   AlertCircle,
   ExternalLink,
   Info,
-  Ticket,
   RefreshCw,
   Image as ImageIcon,
   X,
@@ -42,7 +41,6 @@ import {
   XCircle,
 } from "lucide-react";
 import CustomerInfoSidebar from "./CustomerInfoSidebar";
-import CreateTicketModal from "@/components/freshdesk/CreateTicketModal";
 import CannedResponseDropdown, { CannedResponse } from "./CannedResponseDropdown";
 import { replaceVariables, VariableContext } from "@/lib/canned-response-variables";
 
@@ -128,7 +126,6 @@ export default function ConversationView({
   const [profileLoading, setProfileLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [createTicketModalOpen, setCreateTicketModalOpen] = useState(false);
   const [showCloseConfirmDialog, setShowCloseConfirmDialog] = useState(false);
   const [closingChat, setClosingChat] = useState(false);
   const [isCustomerOnline, setIsCustomerOnline] = useState<boolean | null>(null);
@@ -1193,8 +1190,12 @@ export default function ConversationView({
         <CardHeader className="flex-shrink-0 border-b">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              {/* Customer Profile Section */}
-              <div className="flex items-center space-x-2">
+              {/* Customer Profile Section - Click to open sidebar */}
+              <div 
+                className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 rounded-lg p-2 -ml-2 transition-colors"
+                onClick={() => setSidebarOpen(true)}
+                title="Click to view customer information"
+              >
                 {customerProfile?.profilePicture && !profilePhotoError ? (
                   <img
                     src={customerProfile.profilePicture}
@@ -1210,26 +1211,28 @@ export default function ConversationView({
                 <div className="flex flex-col">
                   <CardTitle className="flex items-center space-x-2 text-base">
                     {customerProfile && (customerProfile.facebookUrl || customerProfile.instagramUrl) ? (
-                      <a
-                        href={customerProfile.facebookUrl || customerProfile.instagramUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="hover:text-blue-600 transition-colors flex items-center space-x-1"
-                      >
+                      <span className="flex items-center space-x-1">
                         <span>{customerProfile.fullName}</span>
-                        <ExternalLink className="h-3 w-3" />
-                      </a>
+                        <Info className="h-3 w-3 text-gray-400" />
+                      </span>
                     ) : customerProfile?.fullName ? (
-                      <span>{customerProfile.fullName}</span>
+                      <span className="flex items-center space-x-1">
+                        <span>{customerProfile.fullName}</span>
+                        <Info className="h-3 w-3 text-gray-400" />
+                      </span>
                     ) : conversation?.customerName ? (
-                      <span>{conversation.customerName}</span>
+                      <span className="flex items-center space-x-1">
+                        <span>{conversation.customerName}</span>
+                        <Info className="h-3 w-3 text-gray-400" />
+                      </span>
                     ) : profileLoading ? (
                       <span className="text-sm text-gray-500">
                         Loading profile...
                       </span>
                     ) : (
-                      <span>
-                        {`Customer ${conversation?.psid?.slice(-4)}`}
+                      <span className="flex items-center space-x-1">
+                        <span>{`Customer ${conversation?.psid?.slice(-4)}`}</span>
+                        <Info className="h-3 w-3 text-gray-400" />
                       </span>
                     )}
                   </CardTitle>
@@ -1349,24 +1352,6 @@ export default function ConversationView({
               >
                 {conversation?.status}
               </Badge>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setSidebarOpen(true)}
-                className="flex items-center gap-2"
-              >
-                <Info className="h-4 w-4" />
-                Customer Info
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCreateTicketModalOpen(true)}
-                className="flex items-center gap-2"
-              >
-                <Ticket className="h-4 w-4" />
-                Create Ticket
-              </Button>
               {conversation?.status !== "CLOSED" && (
                 <Button
                   variant="outline"
@@ -1688,36 +1673,6 @@ export default function ConversationView({
         onNotesUpdate={handleNotesUpdate}
         onTagsUpdate={handleTagsUpdate}
         onContactUpdate={handleContactUpdate}
-      />
-
-      {/* Create Ticket Modal */}
-      <CreateTicketModal
-        isOpen={createTicketModalOpen}
-        onClose={() => setCreateTicketModalOpen(false)}
-        conversationId={conversationId}
-        customerName={
-          customerProfile
-            ? `${customerProfile.firstName || ""} ${
-                customerProfile.lastName || ""
-              }`.trim()
-            : conversation?.customerName
-        }
-        customerEmail={conversation?.customerEmail || undefined}
-        existingTickets={conversation?.freshdeskTickets || []}
-        onTicketCreated={(ticketData) => {
-          // Update conversation state with ticket info
-          setConversation((prev) =>
-            prev
-              ? {
-                  ...prev,
-                  freshdeskTickets: ticketData.conversation.freshdeskTickets,
-                }
-              : null
-          );
-
-          // Close modal after successful creation
-          setTimeout(() => setCreateTicketModalOpen(false), 2000);
-        }}
       />
 
       {/* Image Validation Error Dialog */}
