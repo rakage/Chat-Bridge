@@ -1,10 +1,10 @@
-# Strict Duplicate Check Fix - Instagram Conversations
+# Multiple Duplicate Check Fixes - Instagram Conversations
 
 ## Critical Bug
 
 **Issue:** Instagram messages to CLOSED conversations were still appending to the closed conversation instead of creating new ones.
 
-**Root Cause:** The "STRICT DUPLICATE PREVENTION" check at the end of `getOrCreateInstagramConversation()` was finding ALL conversations (including CLOSED) and returning them instead of creating new ones.
+**Root Cause:** There were **TWO** separate duplicate prevention checks in `getOrCreateInstagramConversation()` that were finding ALL conversations (including CLOSED) and returning them instead of creating new ones.
 
 ---
 
@@ -40,11 +40,11 @@
 
 ---
 
-## The Fix
+## The Fixes
 
-### Location
+### Fix #1: STRICT CHECK (Line ~176)
 **File:** `src/lib/instagram-conversation-helper.ts`  
-**Line:** ~176 (in the strict duplicate check section)
+**Section:** First duplicate prevention check
 
 ### Code Changed
 
@@ -110,6 +110,69 @@ if (matchingSuffix) {
 
 // If we get here, no OPEN/SNOOZED conversation found (CLOSED ones are OK to duplicate)
 console.log(`✅ STRICT CHECK PASSED: No OPEN/SNOOZED conversation with suffix ${customerIGSID.slice(-4)}, safe to create new`);
+```
+
+---
+
+### Fix #2: FINAL CHECK (Line ~340)
+**File:** `src/lib/instagram-conversation-helper.ts`  
+**Section:** Second duplicate prevention check (right before creating conversation)
+
+**Before:**
+```typescript
+// FINAL CHECK: Before creating, do one more check for existing conversations
+console.log(`🔍 Final duplicate check before creating conversation...`);
+const finalCheck = await db.conversation.findMany({
+  where: {
+    instagramConnectionId: instagramConnectionId,
+    platform: 'INSTAGRAM'
+    // ❌ No status filter!
+  }
+});
+
+const existingWithSameSuffix = finalCheck.find(conv => 
+  conv.psid?.slice(-4) === psidSuffix
+);
+
+if (existingWithSameSuffix) {
+  console.log(`⚠️ DUPLICATE PREVENTION: Found existing conversation ${existingWithSameSuffix.id}...`);
+  console.log(`   🚫 REFUSING TO CREATE DUPLICATE - returning existing conversation`);
+  return await db.conversation.findUnique({
+    where: { id: existingWithSameSuffix.id },
+    // ...
+  });
+}
+```
+
+**After:**
+```typescript
+// FINAL CHECK: Before creating, do one more check for existing OPEN/SNOOZED conversations
+console.log(`🔍 Final duplicate check before creating conversation...`);
+const finalCheck = await db.conversation.findMany({
+  where: {
+    instagramConnectionId: instagramConnectionId,
+    platform: 'INSTAGRAM',
+    status: {
+      in: ["OPEN", "SNOOZED"], // ✅ Only check non-closed conversations
+    },
+  }
+});
+
+const existingWithSameSuffix = finalCheck.find(conv => 
+  conv.psid?.slice(-4) === psidSuffix
+);
+
+if (existingWithSameSuffix) {
+  console.log(`⚠️ DUPLICATE PREVENTION: Found existing OPEN/SNOOZED conversation ${existingWithSameSuffix.id}...`);
+  console.log(`   🚫 REFUSING TO CREATE DUPLICATE - returning existing conversation`);
+  return await db.conversation.findUnique({
+    where: { id: existingWithSameSuffix.id },
+    // ...
+  });
+}
+
+// Create conversation only if no duplicates found (CLOSED ones are OK to duplicate)
+console.log(`✅ No duplicates found (CLOSED conversations ignored), creating new conversation...`);
 ```
 
 ---

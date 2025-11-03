@@ -337,12 +337,15 @@ export async function getOrCreateInstagramConversation(
       cachedAt: new Date().toISOString(),
     };
 
-    // FINAL CHECK: Before creating, do one more check for existing conversations
+    // FINAL CHECK: Before creating, do one more check for existing OPEN/SNOOZED conversations
     console.log(`🔍 Final duplicate check before creating conversation...`);
     const finalCheck = await db.conversation.findMany({
       where: {
         instagramConnectionId: instagramConnectionId,
-        platform: 'INSTAGRAM'
+        platform: 'INSTAGRAM',
+        status: {
+          in: ["OPEN", "SNOOZED"], // Only check non-closed conversations
+        },
       }
     });
     
@@ -352,7 +355,7 @@ export async function getOrCreateInstagramConversation(
     );
     
     if (existingWithSameSuffix) {
-      console.log(`⚠️ DUPLICATE PREVENTION: Found existing conversation ${existingWithSameSuffix.id} with same PSID suffix ${psidSuffix}`);
+      console.log(`⚠️ DUPLICATE PREVENTION: Found existing OPEN/SNOOZED conversation ${existingWithSameSuffix.id} with same PSID suffix ${psidSuffix}`);
       console.log(`   Existing PSID: ${existingWithSameSuffix.psid}`);
       console.log(`   New PSID: ${customerIGSID}`);
       console.log(`   🚫 REFUSING TO CREATE DUPLICATE - returning existing conversation`);
@@ -368,8 +371,8 @@ export async function getOrCreateInstagramConversation(
       });
     }
 
-    // Create conversation only if no duplicates found
-    console.log(`✅ No duplicates found, creating new conversation for PSID ${customerIGSID}`);
+    // Create conversation only if no duplicates found (CLOSED ones are OK to duplicate)
+    console.log(`✅ No duplicates found (CLOSED conversations ignored), creating new conversation for PSID ${customerIGSID}`);
     
     // ABSOLUTE FINAL CHECK: Use database transaction to prevent race conditions
     try {
