@@ -75,6 +75,101 @@ export async function GET(request: NextRequest) {
       console.log(`✅ Found ${pages.length} manageable pages for user ${profile.name}`);
       console.log("🔍 Debug: Filtered pages:", JSON.stringify(pages, null, 2));
 
+      // Filter out pages that are already connected to THIS company
+      // to prevent accidental token overwriting
+      if (session.user.companyId) {
+        const existingPageConnections = await db.pageConnection.findMany({
+          where: {
+            companyId: session.user.companyId,
+            pageId: {
+              in: pages.map(p => p.id),
+            },
+          },
+          select: {
+            pageId: true,
+            pageName: true,
+          },
+        });
+
+        const existingPageIds = new Set(existingPageConnections.map(p => p.pageId));
+        const alreadyConnectedPages = pages.filter(p => existingPageIds.has(p.id));
+        const newPages = pages.filter(p => !existingPageIds.has(p.id));
+
+        if (alreadyConnectedPages.length > 0) {
+          console.log(`⚠️ WARNING: ${alreadyConnectedPages.length} pages already connected, filtering them out:`);
+          alreadyConnectedPages.forEach(p => {
+            console.log(`   - ${p.name} (${p.id})`);
+          });
+        }
+
+        if (newPages.length === 0 && alreadyConnectedPages.length > 0) {
+          console.log(`❌ All ${pages.length} pages are already connected!`);
+          return NextResponse.redirect(
+            new URL(
+              `/dashboard/integrations/facebook/manage?error=${encodeURIComponent('All your Facebook pages are already connected')}`,
+              process.env.NEXTAUTH_URL
+            )
+          );
+        }
+
+        // Use only new pages that aren't already connected
+        const filteredPages = newPages;
+        console.log(`✅ Filtered to ${filteredPages.length} new pages not yet connected`);
+        
+        // Run diagnostics if no NEW pages found
+        if (filteredPages.length === 0) {
+          console.log('❌ No new pages to connect');
+          return NextResponse.redirect(
+            new URL(
+              `/dashboard/integrations/facebook/manage?error=${encodeURIComponent('All your Facebook pages are already connected')}`,
+              process.env.NEXTAUTH_URL
+            )
+          );
+        }
+
+        // Instead of auto-connecting all pages, redirect to setup page for user to select NEW pages only
+        // Prepare pages data for selection
+        const pagesData = {
+          userProfile: {
+            id: profile.id,
+            name: profile.name,
+            email: profile.email,
+          },
+          pages: filteredPages.map(page => ({
+            id: page.id,
+            name: page.name,
+            category: page.category,
+            access_token: page.access_token,
+            tasks: page.tasks,
+          })),
+        };
+
+        console.log(`🔄 Redirecting to page selection with ${filteredPages.length} NEW pages`);
+        
+        // IMPORTANT: Check if we're sending both pages when we should only send selected ones
+        console.log("🔍 DEBUG: Pages in OAuth callback:");
+        filteredPages.forEach((page, index) => {
+          console.log(`  ${index + 1}. ${page.name} (${page.id}) - token length: ${page.access_token.length}`);
+        });
+        
+        const pagesDataString = JSON.stringify(pagesData);
+        const urlEncodedData = encodeURIComponent(pagesDataString);
+        const urlLength = urlEncodedData.length;
+        
+        console.log(`📏 URL data length: ${urlLength} characters`);
+        if (urlLength > 2000) {
+          console.warn(`⚠️ WARNING: URL data is very long (${urlLength} chars) - may cause issues!`);
+        }
+        
+        // Redirect to setup page with pages data for user selection
+        return NextResponse.redirect(
+          new URL(
+            `/dashboard/integrations/facebook/setup?facebook_success=true&pages_data=${urlEncodedData}`,
+            process.env.NEXTAUTH_URL
+          )
+        );
+      }
+
       // Run diagnostics if no pages found
       if (pages.length === 0) {
         console.log('🔍 Running Facebook diagnostics to identify issues...');
