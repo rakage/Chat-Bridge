@@ -56,6 +56,18 @@ export async function GET(
       );
     }
 
+    // Debug log to help diagnose connection issues
+    console.log(`🔍 Conversation ${conversationId} connection details:`);
+    console.log(`   Platform: ${conversation.platform}`);
+    console.log(`   PSID: ${conversation.psid}`);
+    console.log(`   pageConnectionId: ${conversation.pageConnectionId || 'null'}`);
+    console.log(`   pageConnection loaded: ${!!conversation.pageConnection}`);
+    if (conversation.pageConnection) {
+      console.log(`   pageConnection.id: ${conversation.pageConnection.id}`);
+      console.log(`   pageConnection.pageId: ${conversation.pageConnection.pageId}`);
+      console.log(`   pageConnection.pageName: ${conversation.pageConnection.pageName}`);
+    }
+
     // Check access permissions - handle Facebook, Instagram, Telegram, and Widget
     const company = conversation.pageConnection?.company || conversation.instagramConnection?.company || conversation.telegramConnection?.company || conversation.widgetConfig?.company;
     if (!company) {
@@ -280,7 +292,32 @@ export async function GET(
     // Facebook profile fetching - always fetch fresh to avoid expired photo URLs
     // First, check if pageConnection exists
     if (!conversation.pageConnection) {
-      console.error(`No Facebook page connection found for conversation ${conversationId}`);
+      console.error(`❌ No Facebook page connection found for conversation ${conversationId}`);
+      console.error(`   Conversation platform: ${conversation.platform}, PSID: ${conversation.psid}`);
+      console.error(`   pageConnectionId in conversation: ${conversation.pageConnectionId}`);
+      
+      // Check if pageConnectionId is set but connection doesn't exist (orphaned conversation)
+      if (conversation.pageConnectionId) {
+        console.error(`   ⚠️ ISSUE: Conversation has pageConnectionId but pageConnection is null!`);
+        console.error(`   This suggests the Facebook Page was disconnected or deleted.`);
+        console.error(`   Attempting to find if pageConnection still exists in database...`);
+        
+        try {
+          const orphanedConnection = await db.pageConnection.findUnique({
+            where: { id: conversation.pageConnectionId },
+          });
+          
+          if (!orphanedConnection) {
+            console.error(`   ❌ CONFIRMED: pageConnectionId ${conversation.pageConnectionId} does not exist in database`);
+            console.error(`   This conversation is orphaned and needs to be reassigned or cleaned up`);
+          } else {
+            console.error(`   ⚠️ STRANGE: pageConnection exists but wasn't included in query`);
+            console.error(`   This might be a Prisma include issue`);
+          }
+        } catch (checkError) {
+          console.error(`   Error checking orphaned connection:`, checkError);
+        }
+      }
       
       // Return fallback profile
       const fallbackProfile = {
@@ -303,13 +340,19 @@ export async function GET(
     }
     
     try {
+      console.log(`📋 Facebook page connection details:`);
+      console.log(`   Page ID (Facebook): ${conversation.pageConnection.pageId}`);
+      console.log(`   Page Name: ${conversation.pageConnection.pageName}`);
+      console.log(`   Company ID: ${conversation.pageConnection.companyId}`);
+      console.log(`   DB ID: ${conversation.pageConnection.id}`);
+      
       // Decrypt page access token
       const pageAccessToken = await decrypt(
         conversation.pageConnection.pageAccessTokenEnc
       );
 
       // Always fetch fresh profile from Facebook API
-      console.log(`🔄 Fetching fresh Facebook profile for customer ${conversation.psid}`);
+      console.log(`🔄 Fetching fresh Facebook profile for customer ${conversation.psid} using page ${conversation.pageConnection.pageName}`);
       
       const profile = await facebookAPI.getUserProfile(
         conversation.psid,
@@ -350,7 +393,10 @@ export async function GET(
         source: "facebook_api_fresh",
       });
     } catch (facebookError) {
-      console.error("Facebook API error:", facebookError);
+      console.error("❌ Facebook API error for profile fetch:", facebookError);
+      console.error(`   Page: ${conversation.pageConnection?.pageName} (${conversation.pageConnection?.pageId})`);
+      console.error(`   Customer PSID: ${conversation.psid}`);
+      console.error(`   Error details:`, facebookError instanceof Error ? facebookError.message : String(facebookError));
 
       // Return fallback profile data
       const fallbackProfile = {

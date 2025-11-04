@@ -1169,17 +1169,19 @@ export async function initializeWorkers() {
             }
 
             // Default: Facebook Messenger path
-            // Get page access token
-            console.log(`Looking up page connection for Facebook page ID: ${pageId}`);
-            const page = await db.pageConnection.findUnique({ where: { pageId } });
+            // Use the page connection from the conversation (already fetched above)
+            // This ensures we use the correct access token for this specific conversation
+            console.log(`Using page connection from conversation ${conversation.id}`);
+            const pageConnection = conversation.pageConnection;
 
-            console.log(`Page connection found:`, !!page);
-
-            if (!page) {
-              throw new Error('Page connection not found');
+            if (!pageConnection) {
+              console.error(`No page connection found for Facebook conversation ${conversation.id}`);
+              throw new Error('Page connection not found for this conversation');
             }
 
-            const accessToken = await decrypt(page.pageAccessTokenEnc);
+            console.log(`Page connection found: ${pageConnection.pageName} (${pageConnection.pageId})`);
+
+            const accessToken = await decrypt(pageConnection.pageAccessTokenEnc);
 
             // Build message payload - text or image attachment
             let fbMessagePayload: any = { recipient: { id: recipientId } };
