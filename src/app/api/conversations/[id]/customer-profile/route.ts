@@ -351,52 +351,102 @@ export async function GET(
         conversation.pageConnection.pageAccessTokenEnc
       );
 
-      // Always fetch fresh profile from Facebook API
+      // Try to fetch fresh profile from Facebook API
       console.log(`🔄 Fetching fresh Facebook profile for customer ${conversation.psid} using page ${conversation.pageConnection.pageName}`);
       
-      const profile = await facebookAPI.getUserProfile(
-        conversation.psid,
-        pageAccessToken,
-        ["first_name", "last_name", "profile_pic", "locale"]
-      );
+      try {
+        const profile = await facebookAPI.getUserProfile(
+          conversation.psid,
+          pageAccessToken,
+          ["first_name", "last_name", "profile_pic", "locale"]
+        );
 
-      console.log(`✅ Fresh Facebook profile fetched: ${profile.first_name} ${profile.last_name}`);
+        console.log(`✅ Fresh Facebook profile fetched: ${profile.first_name} ${profile.last_name}`);
 
-      // Enhanced profile data with fresh photo URL
-      const enhancedProfile = {
-        id: conversation.psid,
-        firstName: profile.first_name || "Unknown",
-        lastName: profile.last_name || "",
-        fullName: `${profile.first_name || "Unknown"} ${
-          profile.last_name || ""
-        }`.trim(),
-        profilePicture: profile.profile_pic || null,
-        locale: profile.locale || "en_US",
-        facebookUrl: `https://www.facebook.com/${conversation.psid}`,
-        cached: false, // Mark as not cached since we always fetch fresh
-        cachedAt: new Date().toISOString(),
-      };
+        // Enhanced profile data with fresh photo URL
+        const enhancedProfile = {
+          id: conversation.psid,
+          firstName: profile.first_name || "Unknown",
+          lastName: profile.last_name || "",
+          fullName: `${profile.first_name || "Unknown"} ${
+            profile.last_name || ""
+          }`.trim(),
+          profilePicture: profile.profile_pic || null,
+          locale: profile.locale || "en_US",
+          facebookUrl: `https://www.facebook.com/${conversation.psid}`,
+          cached: false,
+          cachedAt: new Date().toISOString(),
+        };
 
-      // Update conversation metadata with fresh profile (without caching)
-      await db.conversation.update({
-        where: { id: conversationId },
-        data: {
-          meta: {
-            ...((conversation.meta as any) || {}),
-            customerProfile: enhancedProfile,
+        // Update conversation metadata with fresh profile
+        await db.conversation.update({
+          where: { id: conversationId },
+          data: {
+            meta: {
+              ...((conversation.meta as any) || {}),
+              customerProfile: enhancedProfile,
+            },
           },
-        },
-      });
-      
-      return NextResponse.json({
-        profile: enhancedProfile,
-        source: "facebook_api_fresh",
-      });
+        });
+        
+        return NextResponse.json({
+          profile: enhancedProfile,
+          source: "facebook_api_fresh",
+        });
+      } catch (profileError: any) {
+        // Facebook no longer allows fetching user profiles for Messenger users due to privacy changes
+        // Error codes: 100 with subcodes 2018218, 2018247 = "No profile available for this user"
+        // This is EXPECTED and NORMAL - Chatwoot has the same issue
+        const errorMessage = profileError?.message || String(profileError);
+        const isProfileUnavailableError = 
+          errorMessage.includes('2018218') || 
+          errorMessage.includes('2018247') ||
+          errorMessage.includes('Insufficient permission to access user profile');
+        
+        if (isProfileUnavailableError) {
+          console.log(`ℹ️  Facebook profile unavailable (privacy restriction) - using fallback`);
+          console.log(`   This is EXPECTED - Facebook blocked profile access for Messenger users`);
+        } else {
+          console.error("❌ Unexpected Facebook API error:", errorMessage);
+        }
+        
+        // Use conversation's customerName if available (set during first message)
+        const customerName = conversation.customerName || `Customer #${conversation.psid.slice(-4)}`;
+        const nameParts = customerName.split(' ');
+        
+        const fallbackProfile = {
+          id: conversation.psid,
+          firstName: nameParts[0] || "Customer",
+          lastName: nameParts.slice(1).join(' ') || "",
+          fullName: customerName,
+          profilePicture: null,
+          locale: "en_US",
+          facebookUrl: `https://www.facebook.com/${conversation.psid}`,
+          cached: true,
+          cachedAt: new Date().toISOString(),
+          note: "Profile access restricted by Facebook (privacy protection)",
+        };
+        
+        // Cache the fallback profile
+        await db.conversation.update({
+          where: { id: conversationId },
+          data: {
+            meta: {
+              ...((conversation.meta as any) || {}),
+              customerProfile: fallbackProfile,
+            },
+          },
+        });
+        
+        return NextResponse.json({
+          profile: fallbackProfile,
+          source: "fallback_privacy_restricted",
+        });
+      }
     } catch (facebookError) {
-      console.error("❌ Facebook API error for profile fetch:", facebookError);
+      console.error("❌ Facebook API connection error:", facebookError);
       console.error(`   Page: ${conversation.pageConnection?.pageName} (${conversation.pageConnection?.pageId})`);
       console.error(`   Customer PSID: ${conversation.psid}`);
-      console.error(`   Error details:`, facebookError instanceof Error ? facebookError.message : String(facebookError));
 
       // Return fallback profile data
       const fallbackProfile = {
