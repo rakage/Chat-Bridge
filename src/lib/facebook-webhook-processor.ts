@@ -83,8 +83,9 @@ export class FacebookWebhookProcessor {
       const lockValue = Date.now().toString();
       const lockTimeout = 30; // 30 seconds
 
-      // Try to acquire lock
-      const acquired = await redis.set(lockKey, lockValue, "NX", "EX", lockTimeout);
+      // Try to acquire lock using ioredis syntax
+      // SET key value EX seconds NX
+      const acquired = await redis.set(lockKey, lockValue, 'EX', lockTimeout, 'NX');
 
       if (!acquired) {
         console.log(`⏳ Lock already held for ${key}, waiting...`);
