@@ -527,27 +527,27 @@ export class FacebookAPI {
    * Subscribe page to webhook events
    */
   async subscribePageToWebhook(
+    pageId: string,
     pageAccessToken: string,
-    subscribed_fields: string[] = [
+    subscribedFields: string[] = [
       "messages",
       "messaging_postbacks",
       "message_deliveries",
       "message_reads",
     ]
   ): Promise<{ success: boolean }> {
-    const response = await fetch(
-      `https://graph.facebook.com/v18.0/me/subscribed_apps`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          subscribed_fields: subscribed_fields.join(","),
-          access_token: pageAccessToken,
-        }),
-      }
+    const url = new URL(
+      `https://graph.facebook.com/${this.apiVersion}/${pageId}/subscribed_apps`
     );
+    url.searchParams.set("access_token", pageAccessToken);
+    url.searchParams.set(
+      "subscribed_fields",
+      subscribedFields.join(",")
+    );
+
+    const response = await fetch(url.toString(), {
+      method: "POST",
+    });
 
     if (!response.ok) {
       const error = await response.text();
@@ -563,14 +563,17 @@ export class FacebookAPI {
    * Unsubscribe page from webhook events
    */
   async unsubscribePageFromWebhook(
+    pageId: string,
     pageAccessToken: string
   ): Promise<{ success: boolean }> {
-    const response = await fetch(
-      `https://graph.facebook.com/v18.0/me/subscribed_apps?access_token=${pageAccessToken}`,
-      {
-        method: "DELETE",
-      }
+    const url = new URL(
+      `https://graph.facebook.com/${this.apiVersion}/${pageId}/subscribed_apps`
     );
+    url.searchParams.set("access_token", pageAccessToken);
+
+    const response = await fetch(url.toString(), {
+      method: "DELETE",
+    });
 
     if (!response.ok) {
       const error = await response.text();

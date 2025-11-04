@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
         if (subscribe) {
           // Subscribe to webhook
           console.log('📞 Calling Facebook API to subscribe to webhook...');
-          await facebookAPI.subscribePageToWebhook(pageAccessToken, [
+          await facebookAPI.subscribePageToWebhook(pageId, pageAccessToken, [
             "messages",
             "messaging_postbacks", 
             "message_deliveries",
@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
         } else {
           // Unsubscribe from webhook
           console.log('📞 Calling Facebook API to unsubscribe from webhook...');
-          await facebookAPI.unsubscribePageFromWebhook(pageAccessToken);
+          await facebookAPI.unsubscribePageFromWebhook(pageId, pageAccessToken);
         }
       }
 

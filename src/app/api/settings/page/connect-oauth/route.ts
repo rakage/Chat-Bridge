@@ -168,7 +168,7 @@ export async function POST(request: NextRequest) {
         } else {
           try {
             console.log(`🔔 Auto-subscribing page ${pageData.id} to webhook events`);
-            await facebookAPI.subscribePageToWebhook(longLivedToken, [
+            await facebookAPI.subscribePageToWebhook(pageData.id, longLivedToken, [
               "messages",
               "messaging_postbacks", 
               "message_deliveries",

@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
       try {
         console.log("🔄 Attempting to unsubscribe from Facebook webhook");
         const decryptedToken = await decrypt(pageConnection.pageAccessTokenEnc);
-        await facebookAPI.unsubscribePageFromWebhook(decryptedToken);
+        await facebookAPI.unsubscribePageFromWebhook(pageConnection.pageId, decryptedToken);
         console.log("✅ Successfully unsubscribed from Facebook webhook");
       } catch (error) {
         console.warn("⚠️ Could not unsubscribe from Facebook webhook:", error);

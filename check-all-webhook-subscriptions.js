@@ -81,7 +81,7 @@ async function checkAndFixWebhookSubscriptions() {
         // Check current webhook subscription status from Facebook
         console.log(`   🔍 Checking Facebook webhook subscription...`);
         const checkResponse = await fetch(
-          `https://graph.facebook.com/v23.0/me/subscribed_apps?access_token=${accessToken}`
+          `https://graph.facebook.com/v23.0/${page.pageId}/subscribed_apps?access_token=${accessToken}`
         );
 
         if (!checkResponse.ok) {
@@ -123,19 +123,13 @@ async function checkAndFixWebhookSubscriptions() {
           console.log(`   🔧 Attempting to subscribe...`);
 
           // Subscribe the page
-          const subscribeResponse = await fetch(
-            `https://graph.facebook.com/v23.0/me/subscribed_apps`,
-            {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                subscribed_fields: 'messages,messaging_postbacks,message_deliveries,message_reads',
-                access_token: accessToken,
-              }),
-            }
-          );
+          const subscribeUrl = new URL(`https://graph.facebook.com/v23.0/${page.pageId}/subscribed_apps`);
+          subscribeUrl.searchParams.set('access_token', accessToken);
+          subscribeUrl.searchParams.set('subscribed_fields', 'messages,messaging_postbacks,message_deliveries,message_reads');
+
+          const subscribeResponse = await fetch(subscribeUrl.toString(), {
+            method: 'POST',
+          });
 
           if (subscribeResponse.ok) {
             const subscribeData = await subscribeResponse.json();

@@ -145,8 +145,9 @@ export class FacebookAPIFixed {
    * FIXED: Subscribe page to webhook events - CORRECT METHOD FOR MULTIPLE PAGES
    */
   async subscribePageToWebhook(
+    pageId: string,
     pageAccessToken: string,
-    subscribed_fields: string[] = [
+    subscribedFields: string[] = [
       "messages",
       "messaging_postbacks",
       "message_deliveries",
@@ -155,20 +156,18 @@ export class FacebookAPIFixed {
   ): Promise<{ success: boolean }> {
     console.log(`🔔 FIXED: Subscribing page to webhook with proper method...`);
     
-    // STEP 1: First, ensure the app is subscribed to the page
-    const subscribeAppResponse = await fetch(
-      `https://graph.facebook.com/v18.0/me/subscribed_apps`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          subscribed_fields: subscribed_fields.join(","),
-          access_token: pageAccessToken,
-        }),
-      }
+    const subscribeUrl = new URL(
+      `https://graph.facebook.com/v18.0/${pageId}/subscribed_apps`
     );
+    subscribeUrl.searchParams.set("access_token", pageAccessToken);
+    subscribeUrl.searchParams.set(
+      "subscribed_fields",
+      subscribedFields.join(",")
+    );
+
+    const subscribeAppResponse = await fetch(subscribeUrl.toString(), {
+      method: "POST",
+    });
 
     if (!subscribeAppResponse.ok) {
       const error = await subscribeAppResponse.text();
@@ -183,7 +182,7 @@ export class FacebookAPIFixed {
 
     // STEP 2: Verify the subscription worked
     const verifyResponse = await fetch(
-      `https://graph.facebook.com/v18.0/me/subscribed_apps?access_token=${pageAccessToken}`
+      `https://graph.facebook.com/v18.0/${pageId}/subscribed_apps?access_token=${pageAccessToken}`
     );
 
     if (verifyResponse.ok) {
@@ -208,14 +207,17 @@ export class FacebookAPIFixed {
    * FIXED: Unsubscribe page from webhook events
    */
   async unsubscribePageFromWebhook(
+    pageId: string,
     pageAccessToken: string
   ): Promise<{ success: boolean }> {
-    console.log(`🔕 FIXED: Unsubscribing page from webhook...`);
-    
-    const response = await fetch(
-      `https://graph.facebook.com/v18.0/me/subscribed_apps?access_token=${pageAccessToken}`,
-      {
-        method: "DELETE",
+    const unsubscribeUrl = new URL(
+      `https://graph.facebook.com/v18.0/${pageId}/subscribed_apps`
+    );
+    unsubscribeUrl.searchParams.set("access_token", pageAccessToken);
+
+    const response = await fetch(unsubscribeUrl.toString(), {
+      method: "DELETE",
+    });
       }
     );
 
@@ -326,7 +328,7 @@ export class FacebookAPIFixed {
 
     for (const { pageId, accessToken } of pageTokens) {
       try {
-        await this.subscribePageToWebhook(accessToken);
+        await this.subscribePageToWebhook(pageId, accessToken);
         successful.push(pageId);
         console.log(`✅ BATCH: Successfully subscribed page ${pageId}`);
       } catch (error) {
@@ -345,14 +347,14 @@ export class FacebookAPIFixed {
   /**
    * NEW: Check webhook subscription status for a page
    */
-  async checkPageWebhookStatus(pageAccessToken: string): Promise<{
+  async checkPageWebhookStatus(pageId: string, pageAccessToken: string): Promise<{
     isSubscribed: boolean;
     appId?: string;
     subscribedFields?: string[];
   }> {
     try {
       const response = await fetch(
-        `https://graph.facebook.com/v18.0/me/subscribed_apps?access_token=${pageAccessToken}`
+        `https://graph.facebook.com/v18.0/${pageId}/subscribed_apps?access_token=${pageAccessToken}`
       );
 
       if (!response.ok) {

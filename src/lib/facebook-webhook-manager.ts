@@ -150,6 +150,7 @@ export class FacebookWebhookManager {
       // Subscribe to webhook using the page's own access token
       console.log(`📡 Subscribing ${pageName} to webhook with its own access token`);
       const subscriptionResult = await facebookAPI.subscribePageToWebhook(
+        pageId,
         pageAccessToken,
         subscriptionFields
       );

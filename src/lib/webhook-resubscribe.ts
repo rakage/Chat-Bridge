@@ -37,7 +37,7 @@ export async function resubscribeAllPagesToWebhooks() {
 
         // Check current subscription status
         const checkResponse = await fetch(
-          `https://graph.facebook.com/v23.0/me/subscribed_apps?access_token=${accessToken}`
+          `https://graph.facebook.com/v23.0/${page.pageId}/subscribed_apps?access_token=${accessToken}`
         );
 
         if (!checkResponse.ok) {
@@ -69,7 +69,7 @@ export async function resubscribeAllPagesToWebhooks() {
         // Not subscribed or missing messages field - subscribe now
         console.log(`🔧 ${page.pageName}: Subscribing to webhooks...`);
 
-        await facebookAPI.subscribePageToWebhook(accessToken, [
+        await facebookAPI.subscribePageToWebhook(page.pageId, accessToken, [
           "messages",
           "messaging_postbacks",
           "message_deliveries",
