@@ -81,9 +81,46 @@ export async function GET(request: NextRequest) {
         const diagnostic = await FacebookDiagnostics.diagnoseLogin(tokenResponse.access_token);
         const report = FacebookDiagnostics.generateReport(diagnostic);
         console.log(report);
+        
+        // Redirect to manage page with no pages found message
+        return NextResponse.redirect(
+          new URL(
+            `/dashboard/integrations/facebook/setup?error=${encodeURIComponent('No Facebook pages found with manage permissions')}`,
+            process.env.NEXTAUTH_URL
+          )
+        );
       }
 
-      // Save the pages to database and subscribe to webhooks
+      // Instead of auto-connecting all pages, redirect to setup page for user to select
+      // Prepare pages data for selection
+      const pagesData = {
+        userProfile: {
+          id: profile.id,
+          name: profile.name,
+          email: profile.email,
+        },
+        pages: pages.map(page => ({
+          id: page.id,
+          name: page.name,
+          category: page.category,
+          access_token: page.access_token,
+          tasks: page.tasks,
+        })),
+      };
+
+      console.log(`🔄 Redirecting to page selection with ${pages.length} pages`);
+      
+      // Redirect to setup page with pages data for user selection
+      return NextResponse.redirect(
+        new URL(
+          `/dashboard/integrations/facebook/setup?facebook_success=true&pages_data=${encodeURIComponent(JSON.stringify(pagesData))}`,
+          process.env.NEXTAUTH_URL
+        )
+      );
+
+      // OLD CODE: Auto-connecting all pages (THIS WAS THE BUG!)
+      // The code below has been disabled - now we redirect to page selection instead
+      /*
       if (pages.length > 0 && session.user.companyId) {
         console.log(`💾 Saving ${pages.length} pages to database for company ${session.user.companyId}...`);
         
@@ -252,6 +289,8 @@ export async function GET(request: NextRequest) {
           )
         );
       }
+      */
+      // END OF DISABLED AUTO-CONNECT CODE
 
     } catch (apiError) {
       console.error("❌ Facebook API error:", apiError);
