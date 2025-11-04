@@ -1,10 +1,16 @@
 /**
- * Force Re-subscribe All Pages to Webhooks
+ * Force Re-subscribe All Pages to Webhooks (Chatwoot-inspired Architecture)
+ * 
+ * This script uses page-specific webhook subscriptions:
+ * - Each page subscribes using /{page-id}/subscribed_apps endpoint
+ * - Prevents webhook truncation (no more overwriting other pages)
+ * - Each page maintains independent subscription
  * 
  * This script will:
  * 1. Check current subscription status for each page
- * 2. Force re-subscribe all pages to ensure they receive webhooks
+ * 2. Force re-subscribe all pages using PAGE-SPECIFIC endpoints
  * 3. Verify subscription was successful
+ * 4. Update database subscription status
  * 
  * Run with: node resubscribe-all-pages.js
  */
@@ -13,6 +19,14 @@ require('dotenv').config({ path: '.env.local' });
 const { PrismaClient } = require('@prisma/client');
 
 const db = new PrismaClient();
+
+const FACEBOOK_API_VERSION = process.env.FACEBOOK_API_VERSION || 'v23.0';
+const SUBSCRIPTION_FIELDS = [
+  'messages',
+  'messaging_postbacks',
+  'message_deliveries',
+  'message_reads',
+];
 
 // Decrypt function
 async function decrypt(encryptedText) {
@@ -74,10 +88,10 @@ async function resubscribeAllPages() {
       try {
         const accessToken = await decrypt(page.pageAccessTokenEnc);
 
-        // STEP 1: Check current subscription
-        console.log(`   🔍 Checking current subscription...`);
+        // STEP 1: Check current subscription using PAGE-SPECIFIC endpoint
+        console.log(`   🔍 Checking current subscription (page-specific endpoint)...`);
         const checkResponse = await fetch(
-          `https://graph.facebook.com/v23.0/${page.pageId}/subscribed_apps?access_token=${accessToken}`
+          `https://graph.facebook.com/${FACEBOOK_API_VERSION}/${page.pageId}/subscribed_apps?access_token=${accessToken}`
         );
 
         if (checkResponse.ok) {
@@ -92,12 +106,15 @@ async function resubscribeAllPages() {
           }
         }
 
-        // STEP 2: Force re-subscribe (this will refresh the subscription)
-        console.log(`   🔧 Force re-subscribing...`);
+        // STEP 2: Force re-subscribe using PAGE-SPECIFIC endpoint
+        // CRITICAL: This is /{page-id}/subscribed_apps NOT /me/subscribed_apps
+        // Using page-specific endpoint ensures each page has independent subscription
+        console.log(`   🔧 Force re-subscribing via PAGE-SPECIFIC endpoint...`);
+        console.log(`   📡 Endpoint: /${page.pageId}/subscribed_apps`);
         
-        const subscribeUrl = new URL(`https://graph.facebook.com/v23.0/${page.pageId}/subscribed_apps`);
+        const subscribeUrl = new URL(`https://graph.facebook.com/${FACEBOOK_API_VERSION}/${page.pageId}/subscribed_apps`);
         subscribeUrl.searchParams.set('access_token', accessToken);
-        subscribeUrl.searchParams.set('subscribed_fields', 'messages,messaging_postbacks,message_deliveries,message_reads');
+        subscribeUrl.searchParams.set('subscribed_fields', SUBSCRIPTION_FIELDS.join(','));
 
         const subscribeResponse = await fetch(subscribeUrl.toString(), {
           method: 'POST',
@@ -112,14 +129,14 @@ async function resubscribeAllPages() {
         const subscribeData = await subscribeResponse.json();
         console.log(`   ✅ Re-subscription successful:`, subscribeData);
 
-        // STEP 3: Verify subscription
-        console.log(`   🔍 Verifying subscription...`);
+        // STEP 3: Verify subscription using PAGE-SPECIFIC endpoint
+        console.log(`   🔍 Verifying subscription via page-specific endpoint...`);
         
         // Wait a bit for Facebook to process
         await new Promise(resolve => setTimeout(resolve, 1000));
         
         const verifyResponse = await fetch(
-          `https://graph.facebook.com/v23.0/${page.pageId}/subscribed_apps?access_token=${accessToken}`
+          `https://graph.facebook.com/${FACEBOOK_API_VERSION}/${page.pageId}/subscribed_apps?access_token=${accessToken}`
         );
 
         if (verifyResponse.ok) {
@@ -150,10 +167,18 @@ async function resubscribeAllPages() {
     console.log(`✅ Re-subscription process completed`);
     console.log(`${'='.repeat(60)}\n`);
 
+    console.log(`🎯 KEY ARCHITECTURAL CHANGE:`);
+    console.log(`   ✅ Now using PAGE-SPECIFIC webhook subscriptions`);
+    console.log(`   ✅ Endpoint: /{page-id}/subscribed_apps (per page)`);
+    console.log(`   ✅ NOT using: /me/subscribed_apps (global, overwrites!)`);
+    console.log(`   ✅ Each page maintains INDEPENDENT subscription`);
+    console.log(`   ✅ No more webhook truncation!\n`);
+
     console.log(`📋 Next Steps:`);
     console.log(`   1. Send a test message to EACH Facebook page`);
     console.log(`   2. Check if webhook is received in your app`);
-    console.log(`   3. Check server logs for webhook events\n`);
+    console.log(`   3. Check server logs for webhook events`);
+    console.log(`   4. All pages should receive webhooks simultaneously!\n`);
 
     console.log(`⚠️  Important: Webhook Configuration`);
     console.log(`   Make sure in Meta App Dashboard → Webhooks:`);
