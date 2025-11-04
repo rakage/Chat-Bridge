@@ -218,8 +218,6 @@ export class FacebookAPIFixed {
     const response = await fetch(unsubscribeUrl.toString(), {
       method: "DELETE",
     });
-      }
-    );
 
     if (!response.ok) {
       const error = await response.text();
