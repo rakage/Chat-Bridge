@@ -10,6 +10,16 @@ const app = next({ dev, hostname, port });
 const handle = app.getRequestHandler();
 
 app.prepare().then(async () => {
+  // Auto-resubscribe all Facebook pages to webhooks on server start
+  setTimeout(async () => {
+    try {
+      const { resubscribeAllPagesToWebhooks } = require('./src/lib/webhook-resubscribe.ts');
+      await resubscribeAllPagesToWebhooks();
+    } catch (error) {
+      console.warn('⚠️  Could not auto-resubscribe pages to webhooks:', error.message);
+    }
+  }, 3000); // Delay 3 seconds to let database connection establish
+
   const server = createServer(async (req, res) => {
     try {
       const parsedUrl = parse(req.url || "", true);

@@ -131,7 +131,8 @@ export async function POST(request: NextRequest) {
         if (existingPage) {
           console.log(`⚠️ WARNING: Page ${pageData.name} (${pageData.id}) already exists!`);
           console.log(`   Existing: companyId=${existingPage.companyId}, dbId=${existingPage.id}`);
-          console.log(`   Will UPDATE with new token from this OAuth session`);
+          console.log(`   Will UPDATE with FRESH token from this OAuth session`);
+          console.log(`   ℹ️  This is GOOD - it ensures token stays fresh with correct permissions`);
         } else {
           console.log(`✨ New page ${pageData.name} (${pageData.id}) - will CREATE`);
         }

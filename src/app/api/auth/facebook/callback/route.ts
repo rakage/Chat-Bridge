@@ -70,13 +70,13 @@ export async function GET(request: NextRequest) {
       const debugData = await debugResponse.json();
       console.log("🔍 Debug: Raw Facebook API response:", JSON.stringify(debugData, null, 2));
       
-      const pages = await facebookOAuth.getUserPages(tokenResponse.access_token);
+      let pages = await facebookOAuth.getUserPages(tokenResponse.access_token);
 
       console.log(`✅ Found ${pages.length} manageable pages for user ${profile.name}`);
       console.log("🔍 Debug: Filtered pages:", JSON.stringify(pages, null, 2));
 
-      // Filter out pages that are already connected to THIS company
-      // to prevent accidental token overwriting
+      // Check which pages are already connected to THIS company
+      // We'll include ALL pages (both new and existing) to allow token refresh
       if (session.user.companyId) {
         const existingPageConnections = await db.pageConnection.findMany({
           where: {
@@ -96,97 +96,31 @@ export async function GET(request: NextRequest) {
         const newPages = pages.filter(p => !existingPageIds.has(p.id));
 
         if (alreadyConnectedPages.length > 0) {
-          console.log(`⚠️ WARNING: ${alreadyConnectedPages.length} pages already connected, filtering them out:`);
+          console.log(`ℹ️  ${alreadyConnectedPages.length} page(s) already connected (tokens will be refreshed if selected):`);
           alreadyConnectedPages.forEach(p => {
             console.log(`   - ${p.name} (${p.id})`);
           });
         }
 
-        if (newPages.length === 0 && alreadyConnectedPages.length > 0) {
-          console.log(`❌ All ${pages.length} pages are already connected!`);
-          return NextResponse.redirect(
-            new URL(
-              `/dashboard/integrations/facebook/manage?error=${encodeURIComponent('All your Facebook pages are already connected')}`,
-              process.env.NEXTAUTH_URL
-            )
-          );
+        if (newPages.length > 0) {
+          console.log(`✨ ${newPages.length} new page(s) available to connect:`);
+          newPages.forEach(p => {
+            console.log(`   - ${p.name} (${p.id})`);
+          });
         }
 
-        // Use only new pages that aren't already connected
-        const filteredPages = newPages;
-        console.log(`✅ Filtered to ${filteredPages.length} new pages not yet connected`);
+        // IMPORTANT: Include ALL pages (both new and existing) to allow token refresh
+        // This fixes the issue where only one page has valid token at a time
+        console.log(`✅ Sending ${pages.length} page(s) to selector (${newPages.length} new, ${alreadyConnectedPages.length} for refresh)`);
         
-        // Run diagnostics if no NEW pages found
-        if (filteredPages.length === 0) {
-          console.log('❌ No new pages to connect');
-          return NextResponse.redirect(
-            new URL(
-              `/dashboard/integrations/facebook/manage?error=${encodeURIComponent('All your Facebook pages are already connected')}`,
-              process.env.NEXTAUTH_URL
-            )
-          );
-        }
-
-        // Instead of auto-connecting all pages, redirect to setup page for user to select NEW pages only
-        // Prepare pages data for selection
-        const pagesData = {
-          userProfile: {
-            id: profile.id,
-            name: profile.name,
-            email: profile.email,
-          },
-          pages: filteredPages.map(page => ({
-            id: page.id,
-            name: page.name,
-            category: page.category,
-            access_token: page.access_token,
-            tasks: page.tasks,
-          })),
-        };
-
-        console.log(`🔄 Redirecting to page selection with ${filteredPages.length} NEW pages`);
-        
-        // IMPORTANT: Check if we're sending both pages when we should only send selected ones
-        console.log("🔍 DEBUG: Pages in OAuth callback:");
-        filteredPages.forEach((page, index) => {
-          console.log(`  ${index + 1}. ${page.name} (${page.id}) - token length: ${page.access_token.length}`);
-        });
-        
-        const pagesDataString = JSON.stringify(pagesData);
-        const urlEncodedData = encodeURIComponent(pagesDataString);
-        const urlLength = urlEncodedData.length;
-        
-        console.log(`📏 URL data length: ${urlLength} characters`);
-        if (urlLength > 2000) {
-          console.warn(`⚠️ WARNING: URL data is very long (${urlLength} chars) - may cause issues!`);
-        }
-        
-        // Redirect to setup page with pages data for user selection
-        return NextResponse.redirect(
-          new URL(
-            `/dashboard/integrations/facebook/setup?facebook_success=true&pages_data=${urlEncodedData}`,
-            process.env.NEXTAUTH_URL
-          )
-        );
+        // Mark which pages are already connected so UI can show indicator
+        pages = pages.map(p => ({
+          ...p,
+          alreadyConnected: existingPageIds.has(p.id),
+        }));
       }
 
-      // Run diagnostics if no pages found
-      if (pages.length === 0) {
-        console.log('🔍 Running Facebook diagnostics to identify issues...');
-        const diagnostic = await FacebookDiagnostics.diagnoseLogin(tokenResponse.access_token);
-        const report = FacebookDiagnostics.generateReport(diagnostic);
-        console.log(report);
-        
-        // Redirect to manage page with no pages found message
-        return NextResponse.redirect(
-          new URL(
-            `/dashboard/integrations/facebook/setup?error=${encodeURIComponent('No Facebook pages found with manage permissions')}`,
-            process.env.NEXTAUTH_URL
-          )
-        );
-      }
-
-      // Instead of auto-connecting all pages, redirect to setup page for user to select
+      // Instead of auto-connecting all pages, redirect to setup page for user to select pages
       // Prepare pages data for selection
       const pagesData = {
         userProfile: {
@@ -200,12 +134,12 @@ export async function GET(request: NextRequest) {
           category: page.category,
           access_token: page.access_token,
           tasks: page.tasks,
+          alreadyConnected: (page as any).alreadyConnected || false,
         })),
       };
 
-      console.log(`🔄 Redirecting to page selection with ${pages.length} pages`);
+      console.log(`🔄 Redirecting to page selection with ${pages.length} page(s)`);
       
-      // IMPORTANT: Check if we're sending both pages when we should only send selected ones
       console.log("🔍 DEBUG: Pages in OAuth callback:");
       pages.forEach((page, index) => {
         console.log(`  ${index + 1}. ${page.name} (${page.id}) - token length: ${page.access_token.length}`);
@@ -227,6 +161,22 @@ export async function GET(request: NextRequest) {
           process.env.NEXTAUTH_URL
         )
       );
+
+      // Run diagnostics if no pages found
+      if (pages.length === 0) {
+        console.log('🔍 Running Facebook diagnostics to identify issues...');
+        const diagnostic = await FacebookDiagnostics.diagnoseLogin(tokenResponse.access_token);
+        const report = FacebookDiagnostics.generateReport(diagnostic);
+        console.log(report);
+        
+        // Redirect to manage page with no pages found message
+        return NextResponse.redirect(
+          new URL(
+            `/dashboard/integrations/facebook/setup?error=${encodeURIComponent('No Facebook pages found with manage permissions')}`,
+            process.env.NEXTAUTH_URL
+          )
+        );
+      }
 
       // OLD CODE: Auto-connecting all pages (THIS WAS THE BUG!)
       // The code below has been disabled - now we redirect to page selection instead
