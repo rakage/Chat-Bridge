@@ -47,6 +47,14 @@ export async function POST(request: NextRequest) {
       hasVerifyToken: !!body.verifyToken,
     });
     
+    // DEBUG: Log which pages are being sent
+    console.log("🔍 DEBUG: Pages being connected:");
+    if (body.pages) {
+      body.pages.forEach((page: any, index: number) => {
+        console.log(`  ${index + 1}. ${page.name} (${page.id})`);
+      });
+    }
+    
     const { pages, verifyToken } = pageConnectOAuthSchema.parse(body);
 
     // Generate a default verify token if not provided
@@ -108,6 +116,25 @@ export async function POST(request: NextRequest) {
         console.log(`🔐 Encrypting tokens for page ${pageData.id}`);
         const encryptedPageToken = await encrypt(longLivedToken);
         const encryptedVerifyToken = await encrypt(finalVerifyToken);
+
+        // Check if this page already exists
+        const existingPage = await db.pageConnection.findUnique({
+          where: { pageId: pageData.id },
+          select: {
+            id: true,
+            pageName: true,
+            pageId: true,
+            companyId: true,
+          },
+        });
+
+        if (existingPage) {
+          console.log(`⚠️ WARNING: Page ${pageData.name} (${pageData.id}) already exists!`);
+          console.log(`   Existing: companyId=${existingPage.companyId}, dbId=${existingPage.id}`);
+          console.log(`   Will UPDATE with new token from this OAuth session`);
+        } else {
+          console.log(`✨ New page ${pageData.name} (${pageData.id}) - will CREATE`);
+        }
 
         // Create or update page connection
         console.log(`💾 Saving page connection for ${pageData.id}`);

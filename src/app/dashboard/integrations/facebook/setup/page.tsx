@@ -46,6 +46,14 @@ export default function FacebookSetupPage() {
 
   const handleFacebookPagesSelected = async (selectedPages: FacebookPageData[]) => {
     try {
+      // DEBUG: Log exactly what pages are being sent
+      console.log("🔍 DEBUG: Pages being sent to connect-oauth API:");
+      console.log(`  Total pages selected: ${selectedPages.length}`);
+      selectedPages.forEach((page, index) => {
+        console.log(`  ${index + 1}. ${page.name} (${page.id})`);
+        console.log(`     Has access_token: ${!!page.access_token}`);
+      });
+
       const response = await fetch("/api/settings/page/connect-oauth", {
         method: "POST",
         headers: {

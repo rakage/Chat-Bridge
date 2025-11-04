@@ -110,10 +110,25 @@ export async function GET(request: NextRequest) {
 
       console.log(`🔄 Redirecting to page selection with ${pages.length} pages`);
       
+      // IMPORTANT: Check if we're sending both pages when we should only send selected ones
+      console.log("🔍 DEBUG: Pages in OAuth callback:");
+      pages.forEach((page, index) => {
+        console.log(`  ${index + 1}. ${page.name} (${page.id}) - token length: ${page.access_token.length}`);
+      });
+      
+      const pagesDataString = JSON.stringify(pagesData);
+      const urlEncodedData = encodeURIComponent(pagesDataString);
+      const urlLength = urlEncodedData.length;
+      
+      console.log(`📏 URL data length: ${urlLength} characters`);
+      if (urlLength > 2000) {
+        console.warn(`⚠️ WARNING: URL data is very long (${urlLength} chars) - may cause issues!`);
+      }
+      
       // Redirect to setup page with pages data for user selection
       return NextResponse.redirect(
         new URL(
-          `/dashboard/integrations/facebook/setup?facebook_success=true&pages_data=${encodeURIComponent(JSON.stringify(pagesData))}`,
+          `/dashboard/integrations/facebook/setup?facebook_success=true&pages_data=${urlEncodedData}`,
           process.env.NEXTAUTH_URL
         )
       );
