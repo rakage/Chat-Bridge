@@ -278,10 +278,34 @@ export async function GET(
     }
     
     // Facebook profile fetching - always fetch fresh to avoid expired photo URLs
+    // First, check if pageConnection exists
+    if (!conversation.pageConnection) {
+      console.error(`No Facebook page connection found for conversation ${conversationId}`);
+      
+      // Return fallback profile
+      const fallbackProfile = {
+        id: conversation.psid,
+        firstName: "Customer",
+        lastName: `#${conversation.psid.slice(-4)}`,
+        fullName: `Customer #${conversation.psid.slice(-4)}`,
+        profilePicture: null,
+        locale: "en_US",
+        facebookUrl: `https://www.facebook.com/${conversation.psid}`,
+        cached: false,
+        error: "Page connection not found",
+      };
+      
+      return NextResponse.json({
+        profile: fallbackProfile,
+        source: "fallback_no_connection",
+        error: "Facebook page connection not found",
+      });
+    }
+    
     try {
       // Decrypt page access token
       const pageAccessToken = await decrypt(
-        conversation.pageConnection!.pageAccessTokenEnc
+        conversation.pageConnection.pageAccessTokenEnc
       );
 
       // Always fetch fresh profile from Facebook API
