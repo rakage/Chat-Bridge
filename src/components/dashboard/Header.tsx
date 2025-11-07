@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useSession, signOut } from "next-auth/react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
@@ -67,6 +67,7 @@ interface UserCompany {
 export default function Header() {
   const { data: session, update } = useSession();
   const pathname = usePathname();
+  const router = useRouter();
   const [showDropdown, setShowDropdown] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showCompanyModal, setShowCompanyModal] = useState(false);
@@ -96,6 +97,15 @@ export default function Header() {
 
   const handleSwitchCompany = async (companyId: string) => {
     setSwitchingCompany(true);
+    
+    // Optimistically update the UI
+    setUserCompanies(prevCompanies =>
+      prevCompanies.map(company => ({
+        ...company,
+        isCurrent: company.id === companyId,
+      }))
+    );
+    
     try {
       const response = await fetch("/api/companies/switch", {
         method: "POST",
@@ -108,16 +118,26 @@ export default function Header() {
       if (response.ok) {
         // Update session
         await update();
-        // Reload the page to refresh all data
-        window.location.reload();
+        
+        // Close the dropdown
+        setShowDropdown(false);
+        
+        // Refresh the page data without full reload (keeps navbar/sidebar intact)
+        router.refresh();
       } else {
         const error = await response.json();
         console.error("Failed to switch company:", error);
         alert(error.error || "Failed to switch company");
+        
+        // Revert optimistic update
+        await fetchUserCompanies();
       }
     } catch (error) {
       console.error("Error switching company:", error);
       alert("Failed to switch company");
+      
+      // Revert optimistic update
+      await fetchUserCompanies();
     } finally {
       setSwitchingCompany(false);
     }
@@ -380,8 +400,8 @@ export default function Header() {
         open={showCompanyModal}
         onOpenChange={setShowCompanyModal}
         onSuccess={() => {
-          // Refresh the page to update company info in header
-          window.location.reload();
+          // Reset companies list to reload it next time dropdown opens
+          setUserCompanies([]);
         }}
       />
     </header>

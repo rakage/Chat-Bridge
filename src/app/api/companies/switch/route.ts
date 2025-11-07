@@ -44,11 +44,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Update user's current company
+    // Update user's current company (and legacy companyId for backward compatibility)
     await db.user.update({
       where: { id: session.user.id },
       data: {
         currentCompanyId: companyId,
+        companyId: companyId, // Legacy field for backward compatibility
       },
     });
 

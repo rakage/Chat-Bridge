@@ -67,11 +67,12 @@ export function CompanyModal({ open, onOpenChange, onSuccess }: CompanyModalProp
 
       // Close modal and callback
       onOpenChange(false);
+      
+      // Refresh without full reload
+      router.refresh();
+      
       if (onSuccess) {
         onSuccess();
-      } else {
-        // Default: redirect to dashboard
-        router.push("/dashboard");
       }
     } catch (error) {
       console.error("Create company error:", error);
@@ -119,11 +120,12 @@ export function CompanyModal({ open, onOpenChange, onSuccess }: CompanyModalProp
 
       // Close modal and callback
       onOpenChange(false);
+      
+      // Refresh without full reload
+      router.refresh();
+      
       if (onSuccess) {
         onSuccess();
-      } else {
-        // Default: redirect to dashboard
-        router.push("/dashboard");
       }
     } catch (error) {
       console.error("Join company error:", error);
