@@ -29,8 +29,25 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Check user's role from CompanyMember table (not legacy User.role)
+    const companyMember = await db.companyMember.findUnique({
+      where: {
+        userId_companyId: {
+          userId: session.user.id,
+          companyId: session.user.companyId,
+        },
+      },
+    });
+
+    if (!companyMember) {
+      return NextResponse.json(
+        { error: "You are not a member of this company" },
+        { status: 403 }
+      );
+    }
+
     // Only ADMIN and OWNER can view invitations
-    if (session.user.role !== "ADMIN" && session.user.role !== "OWNER") {
+    if (companyMember.role !== "ADMIN" && companyMember.role !== "OWNER") {
       return NextResponse.json(
         { error: "Insufficient permissions" },
         { status: 403 }

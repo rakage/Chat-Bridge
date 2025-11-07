@@ -30,20 +30,36 @@ export async function POST(request: NextRequest) {
       return rateLimitResult;
     }
 
-    // Check user has company and is ADMIN or OWNER
-    const user = await db.user.findUnique({
-      where: { id: session.user.id },
-      include: { company: true },
-    });
-
-    if (!user || !user.companyId) {
+    // Check user has company and get their role from CompanyMember
+    if (!session.user.companyId) {
       return NextResponse.json(
         { error: "User must belong to a company" },
         { status: 400 }
       );
     }
 
-    if (user.role !== "ADMIN" && user.role !== "OWNER") {
+    // Get user's role from CompanyMember table (not legacy User.role)
+    const companyMember = await db.companyMember.findUnique({
+      where: {
+        userId_companyId: {
+          userId: session.user.id,
+          companyId: session.user.companyId,
+        },
+      },
+      include: {
+        company: true,
+      },
+    });
+
+    if (!companyMember) {
+      return NextResponse.json(
+        { error: "You are not a member of this company" },
+        { status: 403 }
+      );
+    }
+
+    // Only ADMIN and OWNER can create invitations
+    if (companyMember.role !== "ADMIN" && companyMember.role !== "OWNER") {
       return NextResponse.json(
         { error: "Only admins and owners can create invitations" },
         { status: 403 }
@@ -65,7 +81,7 @@ export async function POST(request: NextRequest) {
     const invitation = await db.companyInvitation.create({
       data: {
         code,
-        companyId: user.companyId,
+        companyId: session.user.companyId,
         invitedByUserId: session.user.id,
         email: email || null,
         expiresAt,

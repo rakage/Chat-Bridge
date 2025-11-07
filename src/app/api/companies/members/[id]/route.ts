@@ -32,8 +32,25 @@ export async function DELETE(
       );
     }
 
+    // Check current user's role from CompanyMember table
+    const currentUserMembership = await db.companyMember.findUnique({
+      where: {
+        userId_companyId: {
+          userId: session.user.id,
+          companyId: session.user.companyId,
+        },
+      },
+    });
+
+    if (!currentUserMembership) {
+      return NextResponse.json(
+        { error: "You are not a member of this company" },
+        { status: 403 }
+      );
+    }
+
     // Only OWNER can remove members
-    if (session.user.role !== "OWNER") {
+    if (currentUserMembership.role !== "OWNER") {
       return NextResponse.json(
         { error: "Only company owners can remove team members" },
         { status: 403 }
@@ -42,53 +59,58 @@ export async function DELETE(
 
     const { id: userId } = await params;
 
-    // Get the user to remove
-    const userToRemove = await db.user.findUnique({
-      where: { id: userId },
-    });
-
-    if (!userToRemove) {
-      return NextResponse.json(
-        { error: "User not found" },
-        { status: 404 }
-      );
-    }
-
-    // Check if user belongs to the same company
-    if (userToRemove.companyId !== session.user.companyId) {
-      return NextResponse.json(
-        { error: "User doesn't belong to your company" },
-        { status: 403 }
-      );
-    }
-
     // Can't remove self
-    if (userToRemove.id === session.user.id) {
+    if (userId === session.user.id) {
       return NextResponse.json(
         { error: "You cannot remove yourself" },
         { status: 400 }
       );
     }
 
+    // Get the CompanyMember to remove
+    const memberToRemove = await db.companyMember.findUnique({
+      where: {
+        userId_companyId: {
+          userId: userId,
+          companyId: session.user.companyId,
+        },
+      },
+      include: {
+        user: {
+          select: {
+            email: true,
+          },
+        },
+      },
+    });
+
+    if (!memberToRemove) {
+      return NextResponse.json(
+        { error: "User not found in your company" },
+        { status: 404 }
+      );
+    }
+
     // Can't remove other owners
-    if (userToRemove.role === "OWNER") {
+    if (memberToRemove.role === "OWNER") {
       return NextResponse.json(
         { error: "Cannot remove other owners" },
         { status: 403 }
       );
     }
 
-    // Remove user from company
-    await db.user.update({
-      where: { id: userId },
-      data: {
-        companyId: null,
-        role: "AGENT", // Reset to default role
+    // Remove CompanyMember record
+    await db.companyMember.delete({
+      where: {
+        userId_companyId: {
+          userId: userId,
+          companyId: session.user.companyId,
+        },
       },
     });
 
     console.log(
-      `✅ User ${userToRemove.email} removed from company by ${session.user.email}`
+      `✅ User ${memberToRemove.user.email} removed from company by ${session.user.email}`
     );
 
     return NextResponse.json({
