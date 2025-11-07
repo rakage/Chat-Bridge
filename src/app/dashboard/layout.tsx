@@ -2,7 +2,7 @@
 
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { AppSidebar } from "@/components/dashboard/AppSidebar";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import Header from "@/components/dashboard/Header";
@@ -17,6 +17,7 @@ export default function DashboardLayout({
 }) {
   const { status } = useSession();
   const router = useRouter();
+  const hasMountedRef = useRef(false);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -24,7 +25,17 @@ export default function DashboardLayout({
     }
   }, [status, router]);
 
-  if (status === "loading") {
+  useEffect(() => {
+    // Mark as mounted after first render
+    if (status !== "loading") {
+      hasMountedRef.current = true;
+    }
+  }, [status]);
+
+  // Only show full-screen spinner on initial page load
+  // After first mount, let individual components handle their own loading states
+  // This prevents the full-screen spinner when session is being updated during company switch
+  if (status === "loading" && !hasMountedRef.current) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
