@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
       include: {
         _count: {
           select: {
-            users: true,
+            members: true, // Count from CompanyMember table, not legacy users
           },
         },
       },
@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
           id: company.id,
           name: company.name,
           createdAt: company.createdAt,
-          memberCount: company._count.users,
+          memberCount: company._count.members,
         },
       },
       rateLimitResult

@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
             name: true,
             _count: {
               select: {
-                users: true,
+                members: true, // Count from CompanyMember table, not legacy users
               },
             },
           },
@@ -90,15 +90,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if user already belongs to a company
-    const user = await db.user.findUnique({
-      where: { id: session.user.id },
-      select: { companyId: true },
+    // Check if user is already a member of THIS specific company
+    const existingMembership = await db.companyMember.findUnique({
+      where: {
+        userId_companyId: {
+          userId: session.user.id,
+          companyId: invitation.companyId,
+        },
+      },
     });
 
-    if (user?.companyId) {
+    if (existingMembership) {
       return NextResponse.json(
-        { error: "You already belong to a company" },
+        { error: "You are already a member of this company" },
         { status: 400 }
       );
     }
@@ -107,7 +111,7 @@ export async function POST(request: NextRequest) {
       valid: true,
       invitation: {
         companyName: invitation.company.name,
-        memberCount: invitation.company._count.users,
+        memberCount: invitation.company._count.members,
         invitedBy: invitation.invitedBy.name,
         expiresAt: invitation.expiresAt,
         maxUses: invitation.maxUses,
