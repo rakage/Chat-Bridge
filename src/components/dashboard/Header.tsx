@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { usePathname, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { useCompanySwitch } from "@/contexts/CompanyContext";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -68,6 +69,7 @@ export default function Header() {
   const { data: session, update } = useSession();
   const pathname = usePathname();
   const router = useRouter();
+  const { triggerCompanySwitch, finishCompanySwitch } = useCompanySwitch();
   const [showDropdown, setShowDropdown] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showCompanyModal, setShowCompanyModal] = useState(false);
@@ -106,6 +108,9 @@ export default function Header() {
       }))
     );
     
+    // Trigger company switch context (this will make components show skeleton loading)
+    triggerCompanySwitch();
+    
     try {
       const response = await fetch("/api/companies/switch", {
         method: "POST",
@@ -122,22 +127,24 @@ export default function Header() {
         // Close the dropdown
         setShowDropdown(false);
         
-        // Refresh the page data without full reload (keeps navbar/sidebar intact)
-        router.refresh();
+        // Finish company switch (this will trigger data refetch in components)
+        finishCompanySwitch();
       } else {
         const error = await response.json();
         console.error("Failed to switch company:", error);
         alert(error.error || "Failed to switch company");
         
-        // Revert optimistic update
+        // Revert optimistic update and finish switching
         await fetchUserCompanies();
+        finishCompanySwitch();
       }
     } catch (error) {
       console.error("Error switching company:", error);
       alert("Failed to switch company");
       
-      // Revert optimistic update
+      // Revert optimistic update and finish switching
       await fetchUserCompanies();
+      finishCompanySwitch();
     } finally {
       setSwitchingCompany(false);
     }

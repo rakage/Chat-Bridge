@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { useSocket } from "@/hooks/useSocket";
+import { useCompanySwitch } from "@/contexts/CompanyContext";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -56,6 +57,7 @@ export default function ConversationsList({
 }: ConversationsListProps) {
   const { data: session } = useSession();
   const { socket, isConnected } = useSocket();
+  const { isSwitching } = useCompanySwitch();
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
@@ -228,6 +230,25 @@ export default function ConversationsList({
       console.log("✅ Initial conversations loaded, real-time updates handled via socket");
     }
   }, []);
+
+  // Company switch handler - refetch data when company switch completes
+  useEffect(() => {
+    // Only refetch if component was already initialized and switching just finished
+    if (initializedRef.current && !isSwitching) {
+      console.log("🔄 Company switched, refetching conversations...");
+      
+      // Reset state
+      setOffset(0);
+      setHasMore(true);
+      onSelectConversation(null as any); // Clear selected conversation
+      
+      // Refetch conversations and last seen data
+      if (session?.user?.id) {
+        loadLastSeenData();
+      }
+      fetchConversations(false, false);
+    }
+  }, [isSwitching, session?.user?.id, onSelectConversation]);
 
   // Request notification permission on mount
   useEffect(() => {
@@ -882,7 +903,7 @@ export default function ConversationsList({
     }
   };
 
-  if (loading) {
+  if (loading || isSwitching) {
     return (
       <Card className="h-[600px] flex flex-col">
         <CardHeader className="flex-shrink-0 pb-3 sm:pb-6">
@@ -891,7 +912,7 @@ export default function ConversationsList({
               <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5" />
               <span className="hidden sm:inline">Conversations</span>
               <span className="sm:hidden">Chats</span>
-              {totalUnreadCount > 0 && (
+              {!isSwitching && totalUnreadCount > 0 && (
                 <span className="bg-red-500 text-white text-xs rounded-full px-1.5 sm:px-2 py-1 min-w-[18px] sm:min-w-[20px] text-center">
                   {totalUnreadCount}
                 </span>

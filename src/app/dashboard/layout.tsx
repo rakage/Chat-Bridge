@@ -8,6 +8,7 @@ import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import Header from "@/components/dashboard/Header";
 import CompanyRequired from "@/components/auth/CompanyRequired";
 import { Toaster } from "@/components/ui/toaster";
+import { CompanyProvider } from "@/contexts/CompanyContext";
 
 export default function DashboardLayout({
   children,
@@ -37,22 +38,24 @@ export default function DashboardLayout({
 
   return (
     <CompanyRequired>
-      <SidebarProvider defaultOpen={true}>
-        <AppSidebar />
-        <SidebarInset>
-          <Header />
-          <main 
-            className="flex-1 overflow-x-hidden overflow-y-auto bg-white p-0"
-            style={{
-              backgroundImage: `radial-gradient(circle, #EAEAEA 2px, transparent 2px)`,
-              backgroundSize: "18px 18px",
-            }}
-          >
-            <div className="container mx-auto px-4 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-8">{children}</div>
-          </main>
-        </SidebarInset>
-      </SidebarProvider>
-      <Toaster />
+      <CompanyProvider>
+        <SidebarProvider defaultOpen={true}>
+          <AppSidebar />
+          <SidebarInset>
+            <Header />
+            <main 
+              className="flex-1 overflow-x-hidden overflow-y-auto bg-white p-0"
+              style={{
+                backgroundImage: `radial-gradient(circle, #EAEAEA 2px, transparent 2px)`,
+                backgroundSize: "18px 18px",
+              }}
+            >
+              <div className="container mx-auto px-4 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-8">{children}</div>
+            </main>
+          </SidebarInset>
+        </SidebarProvider>
+        <Toaster />
+      </CompanyProvider>
     </CompanyRequired>
   );
 }

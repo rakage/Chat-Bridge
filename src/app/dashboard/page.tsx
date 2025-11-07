@@ -2,6 +2,7 @@
 
 import { useSession } from "next-auth/react";
 import { useEffect, useState, useMemo, useCallback } from "react";
+import { useCompanySwitch } from "@/contexts/CompanyContext";
 import {
   Card,
   CardContent,
@@ -61,6 +62,7 @@ interface ChartData {
 
 export default function DashboardPage() {
   const { data: session } = useSession();
+  const { isSwitching } = useCompanySwitch();
   const [stats, setStats] = useState<DashboardStats>({
     totalConversations: 0,
     conversationGrowth: 0,
@@ -189,7 +191,17 @@ export default function DashboardPage() {
     }
   }, [session?.user?.companyId, fetchDashboardData]);
 
-  if (loading) {
+  // Refetch data when company switch completes
+  useEffect(() => {
+    if (!isSwitching && session?.user?.companyId) {
+      console.log("🔄 Company switched, refetching dashboard data...");
+      setLoading(true);
+      setChartsLoading(true);
+      fetchDashboardData();
+    }
+  }, [isSwitching, session?.user?.companyId, fetchDashboardData]);
+
+  if (loading || isSwitching) {
     return (
       <div className="space-y-4 sm:space-y-6">
         {/* Welcome message skeleton */}

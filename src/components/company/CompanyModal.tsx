@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Plus, Loader2, Building2, Key, Copy, Check } from "lucide-react";
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
 
 interface CompanyModalProps {
   open: boolean;
@@ -17,7 +16,6 @@ interface CompanyModalProps {
 
 export function CompanyModal({ open, onOpenChange, onSuccess }: CompanyModalProps) {
   const { update } = useSession();
-  const router = useRouter();
 
   // Create company state
   const [companyName, setCompanyName] = useState("");
@@ -68,9 +66,6 @@ export function CompanyModal({ open, onOpenChange, onSuccess }: CompanyModalProp
       // Close modal and callback
       onOpenChange(false);
       
-      // Refresh without full reload
-      router.refresh();
-      
       if (onSuccess) {
         onSuccess();
       }
@@ -120,9 +115,6 @@ export function CompanyModal({ open, onOpenChange, onSuccess }: CompanyModalProp
 
       // Close modal and callback
       onOpenChange(false);
-      
-      // Refresh without full reload
-      router.refresh();
       
       if (onSuccess) {
         onSuccess();
