@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, use } from "react";
+import { useState, use, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import ConversationsList from "@/components/realtime/ConversationsList";
 import ConversationView from "@/components/realtime/ConversationView";
+import { useCompanySwitch } from "@/contexts/CompanyContext";
 
 interface ConversationPageProps {
   params: Promise<{
@@ -12,7 +14,16 @@ interface ConversationPageProps {
 
 export default function ConversationPage({ params }: ConversationPageProps) {
   const { id } = use(params);
+  const router = useRouter();
+  const { isSwitching } = useCompanySwitch();
   const [selectedConversationId, setSelectedConversationId] = useState(id);
+
+  // Redirect to conversations list when company switches
+  useEffect(() => {
+    if (isSwitching) {
+      router.push("/dashboard/conversations");
+    }
+  }, [isSwitching, router]);
 
   return (
     <div className="space-y-6">

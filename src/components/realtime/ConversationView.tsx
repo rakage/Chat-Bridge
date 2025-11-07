@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { useSocket } from "@/hooks/useSocket";
+import { useCompanySwitch } from "@/contexts/CompanyContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -102,6 +103,7 @@ export default function ConversationView({
   initialConversation,
 }: ConversationViewProps) {
   const { data: session } = useSession();
+  const { isSwitching } = useCompanySwitch();
   const {
     socket,
     isConnected,
@@ -255,8 +257,30 @@ export default function ConversationView({
     };
   }, [loadingMore, hasMore, conversationId, messages.length]);
 
+  // Handle company switch - clear conversation immediately
+  useEffect(() => {
+    if (isSwitching) {
+      console.log(`🔄 ConversationView: Company switching - clearing conversation`);
+      
+      // Immediately clear the conversation to stop any ongoing operations
+      setConversation(null);
+      setMessages([]);
+      setCustomerProfile(null);
+      setError(null);
+      setLoading(true); // Show loading state
+      
+      // Stop any ongoing fetches
+      isFetchingRef.current = false;
+    }
+  }, [isSwitching]);
+
   // Reset state when conversationId changes
   useEffect(() => {
+    // Don't fetch if company is switching
+    if (isSwitching) {
+      return;
+    }
+    
     console.log(`🔄 ConversationView: Conversation changed to ${conversationId}`);
     
     // Track current conversation to prevent stale updates
@@ -299,7 +323,7 @@ export default function ConversationView({
         fetchMessages();
       }
     }
-  }, [conversationId, initialConversation]);
+  }, [conversationId, initialConversation, isSwitching]);
 
   // Fetch customer profile for each conversation
   useEffect(() => {
@@ -1160,12 +1184,14 @@ export default function ConversationView({
     return currentDate !== previousDate;
   };
 
-  if (loading) {
+  if (loading || isSwitching) {
     return (
       <Card className="h-[600px] flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
-          <p className="text-gray-600">Loading conversation...</p>
+          <p className="text-gray-600">
+            {isSwitching ? "Switching company..." : "Loading conversation..."}
+          </p>
         </div>
       </Card>
     );

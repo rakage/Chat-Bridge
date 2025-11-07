@@ -1,14 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import ConversationsList from "@/components/realtime/ConversationsList";
 import ConversationView from "@/components/realtime/ConversationView";
 import { MessageSquare } from "lucide-react";
+import { useCompanySwitch } from "@/contexts/CompanyContext";
 
 export default function ConversationsPage() {
+  const { isSwitching } = useCompanySwitch();
   const [selectedConversationId, setSelectedConversationId] = useState<
     string | null
   >(null);
+
+  // Clear selected conversation when company switches
+  useEffect(() => {
+    if (isSwitching) {
+      setSelectedConversationId(null);
+    }
+  }, [isSwitching]);
 
   return (
     <div className="space-y-6">
