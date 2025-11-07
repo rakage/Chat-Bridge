@@ -82,15 +82,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if user already belongs to a company
-    const user = await db.user.findUnique({
-      where: { id: session.user.id },
-      select: { companyId: true },
+    // Check if user already belongs to this company
+    const existingMembership = await db.companyMember.findUnique({
+      where: {
+        userId_companyId: {
+          userId: session.user.id,
+          companyId: invitation.companyId,
+        },
+      },
     });
 
-    if (user?.companyId) {
+    if (existingMembership) {
       return NextResponse.json(
-        { error: "You already belong to a company" },
+        { error: "You are already a member of this company" },
         { status: 400 }
       );
     }
@@ -99,14 +103,23 @@ export async function POST(request: NextRequest) {
     const newUsedCount = invitation.usedCount + 1;
     const isFullyUsed = newUsedCount >= invitation.maxUses;
 
-    // Accept invitation: Update user and invitation in a transaction
+    // Accept invitation: Create CompanyMember and update user/invitation in a transaction
     await db.$transaction([
-      // Update user to join company
+      // Create CompanyMember with MEMBER role
+      db.companyMember.create({
+        data: {
+          userId: session.user.id,
+          companyId: invitation.companyId,
+          role: "MEMBER",
+        },
+      }),
+      // Update user to set current company (and legacy companyId for backward compatibility)
       db.user.update({
         where: { id: session.user.id },
         data: {
-          companyId: invitation.companyId,
-          role: "AGENT", // New members join as AGENT
+          companyId: invitation.companyId, // Legacy field
+          currentCompanyId: invitation.companyId,
+          role: "AGENT", // Legacy role field - new members join as AGENT
         },
       }),
       // Increment used count and mark as accepted if fully used

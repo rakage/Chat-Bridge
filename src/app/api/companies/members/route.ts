@@ -37,32 +37,35 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get all company members
-    const members = await db.user.findMany({
+    // Get all company members through CompanyMember table
+    const companyMembers = await db.companyMember.findMany({
       where: { companyId: session.user.companyId },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        photoUrl: true,
-        createdAt: true,
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            photoUrl: true,
+            createdAt: true,
+          },
+        },
       },
       orderBy: [
-        { role: "desc" }, // OWNER first, then ADMIN, then AGENT
-        { createdAt: "asc" },
+        { role: "desc" }, // OWNER first, then ADMIN, then MEMBER
+        { joinedAt: "asc" },
       ],
     });
 
     return createRateLimitResponse(
       {
-        members: members.map((member) => ({
-          id: member.id,
-          name: member.name,
-          email: member.email,
-          role: member.role,
-          photoUrl: member.photoUrl,
-          createdAt: member.createdAt,
+        members: companyMembers.map((member) => ({
+          id: member.user.id,
+          name: member.user.name,
+          email: member.user.email,
+          role: member.role, // Use CompanyMember role, not legacy User role
+          photoUrl: member.user.photoUrl,
+          createdAt: member.joinedAt, // Use joinedAt instead of user.createdAt
         })),
       },
       rateLimitResult
