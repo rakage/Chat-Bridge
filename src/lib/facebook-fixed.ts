@@ -127,18 +127,47 @@ export class FacebookAPIFixed {
       };
     };
   }> {
-    const response = await fetch(
-      `https://graph.facebook.com/v18.0/me?fields=id,name,category,picture{url,is_silhouette}&access_token=${pageAccessToken}`
-    );
-
-    if (!response.ok) {
-      const error = await response.text();
-      throw new Error(
-        `Facebook Graph API error: ${response.status} - ${error}`
+    try {
+      const response = await fetch(
+        `https://graph.facebook.com/v18.0/me?fields=id,name,category,picture{url,is_silhouette}&access_token=${pageAccessToken}`
       );
-    }
 
-    return await response.json();
+      if (!response.ok) {
+        const error = await response.text();
+        throw new Error(
+          `Facebook Graph API error: ${response.status} - ${error}`
+        );
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.warn(`⚠️ Could not fetch profile picture for page: ${error}`);
+      
+      // Fallback: fetch basic info without picture
+      const response = await fetch(
+        `https://graph.facebook.com/v18.0/me?fields=id,name,category&access_token=${pageAccessToken}`
+      );
+
+      if (!response.ok) {
+        const error = await response.text();
+        throw new Error(
+          `Facebook Graph API error: ${response.status} - ${error}`
+        );
+      }
+
+      const pageData = await response.json();
+      
+      // Construct public picture URL as fallback
+      return {
+        ...pageData,
+        picture: {
+          data: {
+            url: `https://graph.facebook.com/${pageData.id}/picture?type=large`,
+            is_silhouette: false,
+          },
+        },
+      };
+    }
   }
 
   /**
