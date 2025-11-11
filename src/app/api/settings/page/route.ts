@@ -36,9 +36,6 @@ export async function GET(request: NextRequest) {
         profilePictureUrl: true,
         followersCount: true,
         postsCount: true,
-        photosCount: true,
-        videosCount: true,
-        reelsCount: true,
         autoBot: true,
         pageAccessTokenEnc: true, // Need this to fetch fresh profile
         createdAt: true,
@@ -88,9 +85,6 @@ export async function GET(request: NextRequest) {
         profilePictureUrl: freshProfilePictureUrl, // Use fresh URL
         followersCount: connection.followersCount,
         postsCount: connection.postsCount,
-        photosCount: connection.photosCount,
-        videosCount: connection.videosCount,
-        reelsCount: connection.reelsCount,
         autoBot: connection.autoBot,
         createdAt: connection.createdAt,
         updatedAt: connection.updatedAt,

@@ -7,9 +7,6 @@ After a user connects their Facebook Page, the system now displays:
 1. **Profile Picture** - Page's profile photo
 2. **Followers Count** - Total number of page followers/likes (formatted: "1,234 followers")
 3. **Posts Count** - Total number of published posts (formatted: "567 posts")
-4. **Photos Count** - Total uploaded photos (formatted: "234 photos") 📸 **NEW**
-5. **Videos Count** - Total uploaded videos (formatted: "89 videos") 🎥 **NEW**
-6. **Reels Count** - Total video reels (formatted: "23 reels") 🎬 **NEW**
 
 ## 📍 Where to See It
 
@@ -17,24 +14,15 @@ Visit: **https://chatbridge.raka.my.id/dashboard/integrations/facebook/manage**
 
 Each connected Facebook Page card now shows:
 ```
-┌──────────────────────────────────────────────┐
-│  [Profile Pic]  Page Name                    │
-│                 ● Active                      │
-│                                               │
-│  👥 1,234 followers                          │
-│  📄 567 posts  📸 234 photos  🎥 89 videos  │
-│  🎬 23 reels                                 │
-│                                               │
-│  🤖 AI Auto-Response          [Toggle]       │
-└──────────────────────────────────────────────┘
+┌─────────────────────────────────────┐
+│  [Profile Pic]  Page Name           │
+│                 ● Active             │
+│                                      │
+│  👥 1,234 followers  📄 567 posts   │
+│                                      │
+│  🤖 AI Auto-Response  [Toggle]      │
+└─────────────────────────────────────┘
 ```
-
-### Content Statistics Display
-- **Followers:** Prominent display with blue user icon
-- **Posts:** Gray FileText icon
-- **Photos:** Green Image icon 📸
-- **Videos:** Red Video icon 🎥
-- **Reels:** Purple Film icon 🎬
 
 ## 🔧 Technical Changes
 
@@ -42,16 +30,12 @@ Each connected Facebook Page card now shows:
 ```sql
 ALTER TABLE page_connections 
   ADD COLUMN followers_count INTEGER,
-  ADD COLUMN posts_count INTEGER,
-  ADD COLUMN photos_count INTEGER,    -- 📸 NEW
-  ADD COLUMN videos_count INTEGER,    -- 🎥 NEW
-  ADD COLUMN reels_count INTEGER;     -- 🎬 NEW
+  ADD COLUMN posts_count INTEGER;
 ```
 
 ### 2. Facebook API Integration
-- Enhanced `getPageStatistics()` - Now fetches all content type counts in parallel
-- Updated `getPageFullData()` - Returns profile picture + all statistics
-- **Parallel Fetching:** 4 API calls executed simultaneously for optimal performance
+- Added `getPageStatistics()` - Fetches follower and post counts
+- Added `getPageFullData()` - Fetches all data in parallel (optimized)
 
 ### 3. API Updates
 - `/api/settings/page/connect-oauth` - Now saves statistics when connecting
@@ -86,9 +70,6 @@ To use this feature, your Facebook App needs these permissions:
 | Profile Picture | `GET /v23.0/me?fields=picture{url}` | `{ picture: { data: { url: "..." } } }` |
 | Followers | `GET /v23.0/me?fields=followers_count` | `{ followers_count: 1234 }` |
 | Posts | `GET /v23.0/me?fields=published_posts.limit(0).summary(true)` | `{ published_posts: { summary: { total_count: 567 } } }` |
-| Photos 📸 | `GET /v23.0/me/photos?type=uploaded&limit=0&summary=true` | `{ summary: { total_count: 234 } }` |
-| Videos 🎥 | `GET /v23.0/me/videos?type=uploaded&limit=0&summary=true` | `{ summary: { total_count: 89 } }` |
-| Reels 🎬 | `GET /v23.0/me/video_reels?limit=0&summary=true` | `{ summary: { total_count: 23 } }` |
 
 ## 🚀 How It Works
 
@@ -104,25 +85,13 @@ To use this feature, your Facebook App needs these permissions:
 6. Data saved to database
 7. Redirected to manage page showing all statistics
 
-### API Calls (Optimized - Parallel Fetching):
+### API Calls (Optimized):
 ```javascript
-// Step 1: Fetch profile picture and statistics in parallel
+// Fetches both profile picture and statistics in parallel
 const [pageInfo, statistics] = await Promise.all([
   facebookAPI.getPageInfo(token),      // Profile picture
-  facebookAPI.getPageStatistics(token) // All content statistics
+  facebookAPI.getPageStatistics(token) // Followers + Posts
 ]);
-
-// Step 2: Inside getPageStatistics(), 4 calls execute in parallel:
-const [basicStats, photosResponse, videosResponse, reelsResponse] = 
-  await Promise.all([
-    fetch('/me?fields=followers_count,published_posts...'), // Followers + Posts
-    fetch('/me/photos?type=uploaded&limit=0&summary=true'), // Photos
-    fetch('/me/videos?type=uploaded&limit=0&summary=true'), // Videos
-    fetch('/me/video_reels?limit=0&summary=true')           // Reels
-  ]);
-
-// Total API calls: 5 (executed in 2 parallel batches)
-// Total time: ~1.5-2 seconds (instead of ~8 seconds if sequential)
 ```
 
 ## 📝 Next Steps for Production
@@ -191,32 +160,11 @@ See `FACEBOOK_PAGE_STATISTICS_FEATURE.md` for complete technical documentation.
 
 ---
 
-## ⚠️ Important Notes
-
-### About Reels
-- Reels may show as **0 or not display** for some pages
-- This is normal and expected for:
-  - Pages without reels feature enabled
-  - Older pages created before reels existed
-  - Regions where reels aren't available
-  - Business accounts that don't use reels
-- **Not a bug:** Graceful degradation is built-in
-
-### Existing Pages
-- Pages connected **before this update** will have `null` statistics
-- **Solution:** Simply reconnect the page to fetch all new statistics
-- No data is lost, just needs a fresh connection
-
-### Performance
-- **Sequential (old way):** ~8 seconds for all stats
-- **Parallel (new way):** ~1.5-2 seconds ⚡ **4x faster!**
-
 ## Summary
 
-✅ **Feature:** Display Facebook Page content statistics with detailed breakdown  
-✅ **Statistics:** Profile picture, followers, posts, photos, videos, reels  
-✅ **Database:** Migrated successfully (3 new fields added)  
-✅ **API:** Enhanced with parallel fetching (4x faster)  
-✅ **UI:** Updated with color-coded icons and enhanced layout  
-✅ **Permission:** `pages_read_engagement` enables all content stats  
-🚀 **Status:** Production Ready - Ready for testing and deployment
+✅ **Feature:** Display Facebook Page profile picture, followers count, and posts count  
+✅ **Database:** Migrated successfully  
+✅ **API:** Integrated with Facebook Graph API  
+✅ **UI:** Updated with statistics display  
+✅ **Permission:** `pages_read_engagement` added to OAuth scopes  
+🚀 **Status:** Ready for testing and deployment

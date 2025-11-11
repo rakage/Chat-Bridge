@@ -558,88 +558,30 @@ export class FacebookAPI {
   async getPageStatistics(pageAccessToken: string): Promise<{
     followersCount: number;
     postsCount: number;
-    photosCount: number;
-    videosCount: number;
-    reelsCount: number;
   }> {
     try {
-      // Fetch all statistics in parallel for better performance
-      const [basicStats, photosResponse, videosResponse, reelsResponse] = await Promise.all([
-        // Basic stats (followers and posts)
-        fetch(
-          `https://graph.facebook.com/${this.apiVersion}/me?fields=followers_count,published_posts.limit(0).summary(true)&access_token=${pageAccessToken}`
-        ),
-        // Photos count
-        fetch(
-          `https://graph.facebook.com/${this.apiVersion}/me/photos?type=uploaded&limit=0&summary=true&access_token=${pageAccessToken}`
-        ),
-        // Videos count
-        fetch(
-          `https://graph.facebook.com/${this.apiVersion}/me/videos?type=uploaded&limit=0&summary=true&access_token=${pageAccessToken}`
-        ),
-        // Reels count (using video_reels edge if available)
-        fetch(
-          `https://graph.facebook.com/${this.apiVersion}/me/video_reels?limit=0&summary=true&access_token=${pageAccessToken}`
-        ).catch(() => null), // Reels might not be available for all pages
-      ]);
+      const response = await fetch(
+        `https://graph.facebook.com/${this.apiVersion}/me?fields=followers_count,published_posts.limit(0).summary(true)&access_token=${pageAccessToken}`
+      );
 
-      if (!basicStats.ok) {
-        const error = await basicStats.text();
+      if (!response.ok) {
+        const error = await response.text();
         throw new Error(
-          `Facebook Graph API error: ${basicStats.status} - ${error}`
+          `Facebook Graph API error: ${response.status} - ${error}`
         );
       }
 
-      const basicData = await basicStats.json();
-      
-      // Parse photos count
-      let photosCount = 0;
-      if (photosResponse && photosResponse.ok) {
-        try {
-          const photosData = await photosResponse.json();
-          photosCount = photosData.summary?.total_count || 0;
-        } catch (e) {
-          console.warn('⚠️ Could not parse photos count:', e);
-        }
-      }
-
-      // Parse videos count
-      let videosCount = 0;
-      if (videosResponse && videosResponse.ok) {
-        try {
-          const videosData = await videosResponse.json();
-          videosCount = videosData.summary?.total_count || 0;
-        } catch (e) {
-          console.warn('⚠️ Could not parse videos count:', e);
-        }
-      }
-
-      // Parse reels count
-      let reelsCount = 0;
-      if (reelsResponse && reelsResponse.ok) {
-        try {
-          const reelsData = await reelsResponse.json();
-          reelsCount = reelsData.summary?.total_count || 0;
-        } catch (e) {
-          console.warn('⚠️ Could not parse reels count (may not be supported for this page):', e);
-        }
-      }
+      const data = await response.json();
       
       return {
-        followersCount: basicData.followers_count || 0,
-        postsCount: basicData.published_posts?.summary?.total_count || 0,
-        photosCount,
-        videosCount,
-        reelsCount,
+        followersCount: data.followers_count || 0,
+        postsCount: data.published_posts?.summary?.total_count || 0,
       };
     } catch (error) {
       console.warn(`⚠️ Could not fetch page statistics: ${error}`);
       return {
         followersCount: 0,
         postsCount: 0,
-        photosCount: 0,
-        videosCount: 0,
-        reelsCount: 0,
       };
     }
   }
@@ -654,9 +596,6 @@ export class FacebookAPI {
     profilePictureUrl: string | null;
     followersCount: number;
     postsCount: number;
-    photosCount: number;
-    videosCount: number;
-    reelsCount: number;
   }> {
     try {
       // Fetch page info and statistics in parallel
@@ -672,9 +611,6 @@ export class FacebookAPI {
         profilePictureUrl: pageInfo.picture?.data?.url || null,
         followersCount: statistics.followersCount,
         postsCount: statistics.postsCount,
-        photosCount: statistics.photosCount,
-        videosCount: statistics.videosCount,
-        reelsCount: statistics.reelsCount,
       };
     } catch (error) {
       console.error(`❌ Failed to fetch full page data: ${error}`);
