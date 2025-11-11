@@ -82,15 +82,24 @@ export async function POST(request: NextRequest) {
         let profilePictureUrl = null;
         let followersCount = null;
         let postsCount = null;
+        let photosCount = null;
+        let videosCount = null;
+        let reelsCount = null;
         try {
           const pageFullData = await facebookAPI.getPageFullData(longLivedToken);
           profilePictureUrl = pageFullData.profilePictureUrl;
           followersCount = pageFullData.followersCount;
           postsCount = pageFullData.postsCount;
+          photosCount = pageFullData.photosCount;
+          videosCount = pageFullData.videosCount;
+          reelsCount = pageFullData.reelsCount;
           console.log(`✅ Got page data for ${pageData.id}:`, {
             profilePicture: profilePictureUrl ? 'Found' : 'Not found',
             followers: followersCount,
             posts: postsCount,
+            photos: photosCount,
+            videos: videosCount,
+            reels: reelsCount,
           });
         } catch (dataError) {
           console.warn(`⚠️ Could not fetch full page data for ${pageData.id}:`, dataError);
@@ -166,6 +175,9 @@ export async function POST(request: NextRequest) {
             profilePictureUrl: profilePictureUrl,
             followersCount: followersCount,
             postsCount: postsCount,
+            photosCount: photosCount,
+            videosCount: videosCount,
+            reelsCount: reelsCount,
           },
           update: {
             pageName: pageData.name,
@@ -174,6 +186,9 @@ export async function POST(request: NextRequest) {
             profilePictureUrl: profilePictureUrl,
             followersCount: followersCount,
             postsCount: postsCount,
+            photosCount: photosCount,
+            videosCount: videosCount,
+            reelsCount: reelsCount,
           },
         });
 

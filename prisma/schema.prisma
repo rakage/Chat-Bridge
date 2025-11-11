@@ -118,6 +118,9 @@ model PageConnection {
   profilePictureUrl  String?
   followersCount     Int?
   postsCount         Int?
+  photosCount        Int?
+  videosCount        Int?
+  reelsCount         Int?
   createdAt          DateTime       @default(now())
   updatedAt          DateTime       @updatedAt
   conversations      Conversation[]

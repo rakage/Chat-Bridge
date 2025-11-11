@@ -10,7 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { ProfilePicture } from "@/components/ProfilePicture";
 import { DeleteSocialConfirmDialog } from "@/components/DeleteSocialConfirmDialog";
-import { AlertCircle, CheckCircle, ArrowLeft, Trash2, Plus, Bot, Users, FileText } from "lucide-react";
+import { AlertCircle, CheckCircle, ArrowLeft, Trash2, Plus, Bot, Users, FileText, Image, Video, Film } from "lucide-react";
 
 export default function FacebookManagePage() {
   const router = useRouter();
@@ -300,20 +300,54 @@ export default function FacebookManagePage() {
                 
                 {/* Page Statistics */}
                 {(page.followersCount !== null && page.followersCount !== undefined) || 
-                 (page.postsCount !== null && page.postsCount !== undefined) ? (
-                  <div className="mt-4 flex items-center gap-4 text-sm text-gray-600">
+                 (page.postsCount !== null && page.postsCount !== undefined) ||
+                 (page.photosCount !== null && page.photosCount !== undefined) ||
+                 (page.videosCount !== null && page.videosCount !== undefined) ||
+                 (page.reelsCount !== null && page.reelsCount !== undefined) ? (
+                  <div className="mt-4 space-y-2">
+                    {/* Followers */}
                     {page.followersCount !== null && page.followersCount !== undefined && (
-                      <div className="flex items-center gap-1.5">
-                        <Users className="h-4 w-4" />
-                        <span className="font-medium">{page.followersCount.toLocaleString()}</span>
+                      <div className="flex items-center gap-1.5 text-sm text-gray-600">
+                        <Users className="h-4 w-4 text-blue-500" />
+                        <span className="font-semibold text-gray-900">{page.followersCount.toLocaleString()}</span>
                         <span className="text-gray-500">followers</span>
                       </div>
                     )}
-                    {page.postsCount !== null && page.postsCount !== undefined && (
-                      <div className="flex items-center gap-1.5">
-                        <FileText className="h-4 w-4" />
-                        <span className="font-medium">{page.postsCount.toLocaleString()}</span>
-                        <span className="text-gray-500">posts</span>
+                    
+                    {/* Content Stats */}
+                    {((page.postsCount !== null && page.postsCount !== undefined) ||
+                      (page.photosCount !== null && page.photosCount !== undefined) ||
+                      (page.videosCount !== null && page.videosCount !== undefined) ||
+                      (page.reelsCount !== null && page.reelsCount !== undefined)) && (
+                      <div className="flex items-center gap-4 text-sm flex-wrap">
+                        {page.postsCount !== null && page.postsCount !== undefined && (
+                          <div className="flex items-center gap-1.5 text-gray-600">
+                            <FileText className="h-3.5 w-3.5 text-gray-500" />
+                            <span className="font-medium text-gray-900">{page.postsCount.toLocaleString()}</span>
+                            <span className="text-gray-500 text-xs">posts</span>
+                          </div>
+                        )}
+                        {page.photosCount !== null && page.photosCount !== undefined && (
+                          <div className="flex items-center gap-1.5 text-gray-600">
+                            <Image className="h-3.5 w-3.5 text-green-500" />
+                            <span className="font-medium text-gray-900">{page.photosCount.toLocaleString()}</span>
+                            <span className="text-gray-500 text-xs">photos</span>
+                          </div>
+                        )}
+                        {page.videosCount !== null && page.videosCount !== undefined && (
+                          <div className="flex items-center gap-1.5 text-gray-600">
+                            <Video className="h-3.5 w-3.5 text-red-500" />
+                            <span className="font-medium text-gray-900">{page.videosCount.toLocaleString()}</span>
+                            <span className="text-gray-500 text-xs">videos</span>
+                          </div>
+                        )}
+                        {page.reelsCount !== null && page.reelsCount !== undefined && (
+                          <div className="flex items-center gap-1.5 text-gray-600">
+                            <Film className="h-3.5 w-3.5 text-purple-500" />
+                            <span className="font-medium text-gray-900">{page.reelsCount.toLocaleString()}</span>
+                            <span className="text-gray-500 text-xs">reels</span>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
