@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { useCompanySwitch } from "@/contexts/CompanyContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -72,6 +73,7 @@ interface Company {
 export default function CompanyPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const { isSwitching } = useCompanySwitch();
   const [company, setCompany] = useState<Company | null>(null);
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [invitations, setInvitations] = useState<Invitation[]>([]);
@@ -103,13 +105,13 @@ export default function CompanyPage() {
     }
   }, [status, session, router]);
 
-  // Load company data - only once when component mounts
+  // Load company data when component mounts or company switches
   useEffect(() => {
-    if (session?.user?.companyId && !company) {
+    if (session?.user?.companyId && !isSwitching) {
       loadCompanyData();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session?.user?.companyId]);
+  }, [session?.user?.companyId, isSwitching]);
 
   const loadCompanyData = async () => {
     console.log("🔄 Loading company data...");
