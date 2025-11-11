@@ -34,6 +34,9 @@ export async function GET(request: NextRequest) {
         pageName: true,
         subscribed: true,
         profilePictureUrl: true,
+        followersCount: true,
+        postsCount: true,
+        autoBot: true,
         pageAccessTokenEnc: true, // Need this to fetch fresh profile
         createdAt: true,
         updatedAt: true,
@@ -80,6 +83,9 @@ export async function GET(request: NextRequest) {
         pageName: connection.pageName,
         subscribed: connection.subscribed,
         profilePictureUrl: freshProfilePictureUrl, // Use fresh URL
+        followersCount: connection.followersCount,
+        postsCount: connection.postsCount,
+        autoBot: connection.autoBot,
         createdAt: connection.createdAt,
         updatedAt: connection.updatedAt,
         webhookConnected: connection.subscribed,

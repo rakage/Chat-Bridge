@@ -77,15 +77,30 @@ export async function POST(request: NextRequest) {
           console.warn(`⚠️ Could not get long-lived token for page ${pageData.id}, using provided token:`, tokenError);
         }
 
-        // Fetch page info including profile picture
-        console.log(`🖼️ Fetching page info and profile picture for ${pageData.id}`);
+        // Fetch page info, profile picture, and statistics
+        console.log(`🖼️ Fetching page info, profile picture, and statistics for ${pageData.id}`);
         let profilePictureUrl = null;
+        let followersCount = null;
+        let postsCount = null;
         try {
-          const pageInfo = await facebookAPI.getPageInfo(longLivedToken);
-          profilePictureUrl = pageInfo.picture?.data?.url || null;
-          console.log(`✅ Got profile picture for page ${pageData.id}:`, profilePictureUrl ? 'Found' : 'Not found');
-        } catch (profileError) {
-          console.warn(`⚠️ Could not fetch profile picture for page ${pageData.id}:`, profileError);
+          const pageFullData = await facebookAPI.getPageFullData(longLivedToken);
+          profilePictureUrl = pageFullData.profilePictureUrl;
+          followersCount = pageFullData.followersCount;
+          postsCount = pageFullData.postsCount;
+          console.log(`✅ Got page data for ${pageData.id}:`, {
+            profilePicture: profilePictureUrl ? 'Found' : 'Not found',
+            followers: followersCount,
+            posts: postsCount,
+          });
+        } catch (dataError) {
+          console.warn(`⚠️ Could not fetch full page data for ${pageData.id}:`, dataError);
+          // Try to fetch just the profile picture as fallback
+          try {
+            const pageInfo = await facebookAPI.getPageInfo(longLivedToken);
+            profilePictureUrl = pageInfo.picture?.data?.url || null;
+          } catch (profileError) {
+            console.warn(`⚠️ Could not fetch profile picture for page ${pageData.id}:`, profileError);
+          }
         }
 
         // Check if this Facebook page is already connected to another company
@@ -149,12 +164,16 @@ export async function POST(request: NextRequest) {
             verifyTokenEnc: encryptedVerifyToken,
             subscribed: false, // Will be updated after webhook subscription
             profilePictureUrl: profilePictureUrl,
+            followersCount: followersCount,
+            postsCount: postsCount,
           },
           update: {
             pageName: pageData.name,
             pageAccessTokenEnc: encryptedPageToken,
             verifyTokenEnc: encryptedVerifyToken,
             profilePictureUrl: profilePictureUrl,
+            followersCount: followersCount,
+            postsCount: postsCount,
           },
         });
 

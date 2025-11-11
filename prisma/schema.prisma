@@ -116,6 +116,8 @@ model PageConnection {
   subscribed         Boolean        @default(false)
   autoBot            Boolean        @default(false)
   profilePictureUrl  String?
+  followersCount     Int?
+  postsCount         Int?
   createdAt          DateTime       @default(now())
   updatedAt          DateTime       @updatedAt
   conversations      Conversation[]

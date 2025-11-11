@@ -10,7 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { ProfilePicture } from "@/components/ProfilePicture";
 import { DeleteSocialConfirmDialog } from "@/components/DeleteSocialConfirmDialog";
-import { AlertCircle, CheckCircle, ArrowLeft, Trash2, Plus, Bot } from "lucide-react";
+import { AlertCircle, CheckCircle, ArrowLeft, Trash2, Plus, Bot, Users, FileText } from "lucide-react";
 
 export default function FacebookManagePage() {
   const router = useRouter();
@@ -297,6 +297,27 @@ export default function FacebookManagePage() {
                     </div>
                   </div>
                 </div>
+                
+                {/* Page Statistics */}
+                {(page.followersCount !== null && page.followersCount !== undefined) || 
+                 (page.postsCount !== null && page.postsCount !== undefined) ? (
+                  <div className="mt-4 flex items-center gap-4 text-sm text-gray-600">
+                    {page.followersCount !== null && page.followersCount !== undefined && (
+                      <div className="flex items-center gap-1.5">
+                        <Users className="h-4 w-4" />
+                        <span className="font-medium">{page.followersCount.toLocaleString()}</span>
+                        <span className="text-gray-500">followers</span>
+                      </div>
+                    )}
+                    {page.postsCount !== null && page.postsCount !== undefined && (
+                      <div className="flex items-center gap-1.5">
+                        <FileText className="h-4 w-4" />
+                        <span className="font-medium">{page.postsCount.toLocaleString()}</span>
+                        <span className="text-gray-500">posts</span>
+                      </div>
+                    )}
+                  </div>
+                ) : null}
                 
                 {/* Auto-Bot Toggle */}
                 <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200">

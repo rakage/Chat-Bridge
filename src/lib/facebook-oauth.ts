@@ -93,6 +93,7 @@ export class FacebookOAuth {
         "pages_show_list", 
         "pages_manage_metadata",
         "pages_messaging",
+        "pages_read_engagement",
         "public_profile"
       ].join(","),
       state: state || this.generateState(),

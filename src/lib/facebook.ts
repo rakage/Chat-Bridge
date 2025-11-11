@@ -553,6 +553,72 @@ export class FacebookAPI {
   }
 
   /**
+   * Get page statistics (followers count and posts count)
+   */
+  async getPageStatistics(pageAccessToken: string): Promise<{
+    followersCount: number;
+    postsCount: number;
+  }> {
+    try {
+      const response = await fetch(
+        `https://graph.facebook.com/${this.apiVersion}/me?fields=followers_count,published_posts.limit(0).summary(true)&access_token=${pageAccessToken}`
+      );
+
+      if (!response.ok) {
+        const error = await response.text();
+        throw new Error(
+          `Facebook Graph API error: ${response.status} - ${error}`
+        );
+      }
+
+      const data = await response.json();
+      
+      return {
+        followersCount: data.followers_count || 0,
+        postsCount: data.published_posts?.summary?.total_count || 0,
+      };
+    } catch (error) {
+      console.warn(`⚠️ Could not fetch page statistics: ${error}`);
+      return {
+        followersCount: 0,
+        postsCount: 0,
+      };
+    }
+  }
+
+  /**
+   * Get comprehensive page data (info + statistics)
+   */
+  async getPageFullData(pageAccessToken: string): Promise<{
+    id: string;
+    name: string;
+    category: string;
+    profilePictureUrl: string | null;
+    followersCount: number;
+    postsCount: number;
+  }> {
+    try {
+      // Fetch page info and statistics in parallel
+      const [pageInfo, statistics] = await Promise.all([
+        this.getPageInfo(pageAccessToken),
+        this.getPageStatistics(pageAccessToken),
+      ]);
+
+      return {
+        id: pageInfo.id,
+        name: pageInfo.name,
+        category: pageInfo.category,
+        profilePictureUrl: pageInfo.picture?.data?.url || null,
+        followersCount: statistics.followersCount,
+        postsCount: statistics.postsCount,
+      };
+    } catch (error) {
+      console.error(`❌ Failed to fetch full page data: ${error}`);
+      throw error;
+    }
+  }
+
+  /**
    * Subscribe page to webhook events
    */
   async subscribePageToWebhook(
