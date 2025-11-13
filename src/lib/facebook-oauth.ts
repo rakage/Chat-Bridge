@@ -186,11 +186,34 @@ export class FacebookOAuth {
   }
 
   /**
+   * Get posts count for a specific page using page access token
+   */
+  async getPagePostsCount(pageId: string, pageAccessToken: string): Promise<number> {
+    try {
+      const response = await fetch(
+        `https://graph.facebook.com/v23.0/${pageId}/published_posts?summary=total_count&limit=0&access_token=${pageAccessToken}`
+      );
+
+      if (!response.ok) {
+        const error = await response.text();
+        console.warn(`⚠️ Could not fetch posts count for page ${pageId}: ${error}`);
+        return 0;
+      }
+
+      const data = await response.json();
+      return data.summary?.total_count || 0;
+    } catch (error) {
+      console.warn(`⚠️ Error fetching posts count for page ${pageId}:`, error);
+      return 0;
+    }
+  }
+
+  /**
    * Get user's Facebook pages with manage permissions
    */
   async getUserPages(accessToken: string): Promise<FacebookPage[]> {
     const response = await fetch(
-      `https://graph.facebook.com/v23.0/me/accounts?fields=id,name,access_token,category,tasks,picture,followers_count,fan_count,published_posts.limit(0).summary(true)&access_token=${accessToken}`
+      `https://graph.facebook.com/v23.0/me/accounts?fields=id,name,access_token,category,tasks,picture,followers_count,fan_count&access_token=${accessToken}`
     );
 
     if (!response.ok) {
@@ -220,7 +243,25 @@ export class FacebookOAuth {
     });
     
     console.log(`🔍 Debug: Found ${manageablePages.length} manageable pages out of ${data.data.length} total`);
-    return manageablePages;
+    
+    // Fetch posts count for each page using their page access tokens
+    console.log("📊 Fetching posts count for each page...");
+    const pagesWithPostsCount = await Promise.all(
+      manageablePages.map(async (page) => {
+        const postsCount = await this.getPagePostsCount(page.id, page.access_token);
+        console.log(`✅ Page ${page.name}: ${postsCount} posts`);
+        return {
+          ...page,
+          published_posts: {
+            summary: {
+              total_count: postsCount,
+            },
+          },
+        };
+      })
+    );
+    
+    return pagesWithPostsCount;
   }
 
   /**

@@ -555,27 +555,42 @@ export class FacebookAPI {
   /**
    * Get page statistics (followers count and posts count)
    */
-  async getPageStatistics(pageAccessToken: string): Promise<{
+  async getPageStatistics(pageAccessToken: string, pageId?: string): Promise<{
     followersCount: number;
     postsCount: number;
   }> {
     try {
-      const response = await fetch(
-        `https://graph.facebook.com/${this.apiVersion}/me?fields=followers_count,fan_count,published_posts.limit(0).summary(true)&access_token=${pageAccessToken}`
+      // Get followers count from /me endpoint
+      const pageInfoResponse = await fetch(
+        `https://graph.facebook.com/${this.apiVersion}/me?fields=followers_count,fan_count,id&access_token=${pageAccessToken}`
       );
 
-      if (!response.ok) {
-        const error = await response.text();
+      if (!pageInfoResponse.ok) {
+        const error = await pageInfoResponse.text();
         throw new Error(
-          `Facebook Graph API error: ${response.status} - ${error}`
+          `Facebook Graph API error: ${pageInfoResponse.status} - ${error}`
         );
       }
 
-      const data = await response.json();
+      const pageInfoData = await pageInfoResponse.json();
+      const actualPageId = pageId || pageInfoData.id;
+      
+      // Get posts count using the correct endpoint
+      const postsResponse = await fetch(
+        `https://graph.facebook.com/${this.apiVersion}/${actualPageId}/published_posts?summary=total_count&limit=0&access_token=${pageAccessToken}`
+      );
+
+      let postsCount = 0;
+      if (postsResponse.ok) {
+        const postsData = await postsResponse.json();
+        postsCount = postsData.summary?.total_count || 0;
+      } else {
+        console.warn(`⚠️ Could not fetch posts count for page ${actualPageId}`);
+      }
       
       return {
-        followersCount: data.followers_count || data.fan_count || 0,
-        postsCount: data.published_posts?.summary?.total_count || 0,
+        followersCount: pageInfoData.followers_count || pageInfoData.fan_count || 0,
+        postsCount: postsCount,
       };
     } catch (error) {
       console.warn(`⚠️ Could not fetch page statistics: ${error}`);

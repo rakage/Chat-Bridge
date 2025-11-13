@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
       // First, let's see what the raw API returns
       console.log("🔍 Debug: Making direct API call to /me/accounts");
       const debugResponse = await fetch(
-        `https://graph.facebook.com/v23.0/me/accounts?fields=id,name,access_token,category,tasks,picture,followers_count,fan_count,published_posts.limit(0).summary(true)&access_token=${tokenResponse.access_token}`
+        `https://graph.facebook.com/v23.0/me/accounts?fields=id,name,access_token,category,tasks,picture,followers_count,fan_count&access_token=${tokenResponse.access_token}`
       );
       const debugData = await debugResponse.json();
       console.log("🔍 Debug: Raw Facebook API response:", JSON.stringify(debugData, null, 2));
