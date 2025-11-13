@@ -32,6 +32,11 @@ export interface FacebookPage {
   };
   followers_count?: number;
   fan_count?: number;
+  posts?: {
+    summary?: {
+      total_count?: number;
+    };
+  };
 }
 
 export interface FacebookPagesResponse {
@@ -185,7 +190,7 @@ export class FacebookOAuth {
    */
   async getUserPages(accessToken: string): Promise<FacebookPage[]> {
     const response = await fetch(
-      `https://graph.facebook.com/v23.0/me/accounts?fields=id,name,access_token,category,tasks,picture,followers_count,fan_count&access_token=${accessToken}`
+      `https://graph.facebook.com/v23.0/me/accounts?fields=id,name,access_token,category,tasks,picture,followers_count,fan_count,posts.limit(0).summary(total_count)&access_token=${accessToken}`
     );
 
     if (!response.ok) {

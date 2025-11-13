@@ -28,7 +28,7 @@ Improved the Facebook page selection UI to show profile pictures, follower count
 
 **After:**
 ```typescript
-`https://graph.facebook.com/v23.0/me/accounts?fields=id,name,access_token,category,tasks,picture,followers_count,fan_count&access_token=${accessToken}`
+`https://graph.facebook.com/v23.0/me/accounts?fields=id,name,access_token,category,tasks,picture,followers_count,fan_count,posts.limit(0).summary(total_count)&access_token=${accessToken}`
 ```
 
 ### 2. OAuth Callback Data Enhancement
@@ -42,6 +42,7 @@ Improved the Facebook page selection UI to show profile pictures, follower count
 ```typescript
 picture: page.picture?.data?.url || null,
 followers_count: page.followers_count || page.fan_count || 0,
+posts_count: page.posts?.summary?.total_count || 0,
 ```
 
 ### 3. Page Selector Component Redesign
@@ -68,12 +69,13 @@ export interface FacebookPageData {
   access_token: string;
   picture?: string | null;        // NEW
   followers_count?: number;       // NEW
+  posts_count?: number;           // NEW
 }
 ```
 
 **New Imports:**
 ```typescript
-import { Users } from "lucide-react";
+import { Users, FileText } from "lucide-react";
 import { ProfilePicture } from "@/components/ProfilePicture";
 ```
 
@@ -117,7 +119,8 @@ Select the pages you want to manage through ChatBridge
 ├────────────────────────────────────────────┤
 │  ☑  [Profile Pic]  Rakage                │
 │                    Bisnis Lokal           │
-│                    👥 1,234 followers     │
+│                    👥 1,234  📄 450       │
+│                    followers   posts       │
 └────────────────────────────────────────────┘
 ```
 
@@ -130,12 +133,18 @@ Select the pages you want to manage through ChatBridge
 - Properly handles missing images with Facebook icon fallback
 
 ### 2. Followers Count
-- Displays follower count with Users icon
+- Displays follower count with Users icon (👥)
 - Formatted with thousand separators (e.g., "1,234")
 - Only shows if count > 0
 - Falls back to `fan_count` if `followers_count` not available
 
-### 3. Cleaner Layout
+### 3. Posts Count
+- Displays posts count with FileText icon (📄)
+- Formatted with thousand separators (e.g., "450")
+- Only shows if count > 0
+- Uses Facebook's `posts.limit(0).summary(total_count)` API
+
+### 4. Cleaner Layout
 - Removed technical information (Page ID)
 - Better spacing and alignment
 - More professional appearance
@@ -166,6 +175,7 @@ PageSelector: Display with ProfilePicture and statistics
 | `picture` | Profile picture object | Display page image |
 | `followers_count` | Followers count | Statistics display |
 | `fan_count` | Fan count (fallback) | Statistics display if followers_count unavailable |
+| `posts.summary.total_count` | Total posts count | Statistics display |
 
 ## Benefits
 

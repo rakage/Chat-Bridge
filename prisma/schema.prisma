@@ -138,6 +138,7 @@ model InstagramConnection {
   accessTokenEnc       String
   profileData          Json?
   mediaCount           Int      @default(0)
+  followersCount       Int?
   conversationsCount   Int      @default(0)
   messagingEnabled     Boolean  @default(false)
   isActive             Boolean  @default(true)

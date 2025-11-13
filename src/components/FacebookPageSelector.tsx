@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { Facebook, CheckCircle, AlertCircle, Users } from "lucide-react";
+import { Facebook, CheckCircle, AlertCircle, Users, FileText } from "lucide-react";
 import { ProfilePicture } from "@/components/ProfilePicture";
 
 export interface FacebookPageData {
@@ -15,6 +15,7 @@ export interface FacebookPageData {
   access_token: string;
   picture?: string | null;
   followers_count?: number;
+  posts_count?: number;
 }
 
 export interface FacebookUserProfile {
@@ -152,11 +153,23 @@ export function FacebookPageSelector({
                           <Badge variant="secondary" className="text-xs mt-1">
                             {page.category}
                           </Badge>
-                          {page.followers_count !== undefined && page.followers_count > 0 && (
-                            <div className="flex items-center gap-1.5 mt-2 text-sm text-gray-600">
-                              <Users className="h-4 w-4" />
-                              <span className="font-medium">{page.followers_count.toLocaleString()}</span>
-                              <span className="text-gray-500">followers</span>
+                          {((page.followers_count !== undefined && page.followers_count > 0) || 
+                            (page.posts_count !== undefined && page.posts_count > 0)) && (
+                            <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
+                              {page.followers_count !== undefined && page.followers_count > 0 && (
+                                <div className="flex items-center gap-1.5">
+                                  <Users className="h-4 w-4" />
+                                  <span className="font-medium">{page.followers_count.toLocaleString()}</span>
+                                  <span className="text-gray-500">followers</span>
+                                </div>
+                              )}
+                              {page.posts_count !== undefined && page.posts_count > 0 && (
+                                <div className="flex items-center gap-1.5">
+                                  <FileText className="h-4 w-4" />
+                                  <span className="font-medium">{page.posts_count.toLocaleString()}</span>
+                                  <span className="text-gray-500">posts</span>
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>

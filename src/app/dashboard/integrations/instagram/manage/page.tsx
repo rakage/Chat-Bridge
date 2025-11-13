@@ -10,7 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { ProfilePicture } from "@/components/ProfilePicture";
 import { DeleteSocialConfirmDialog } from "@/components/DeleteSocialConfirmDialog";
-import { AlertCircle, CheckCircle, ArrowLeft, Trash2, Plus, Bot, MoreVertical, RefreshCw } from "lucide-react";
+import { AlertCircle, CheckCircle, ArrowLeft, Trash2, Plus, Bot, MoreVertical, RefreshCw, Users, FileText } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -322,14 +322,30 @@ export default function InstagramManagePage() {
                       <Badge className="text-xs bg-green-100 text-green-700 hover:bg-green-200">
                         ● Active
                       </Badge>
-                      {connection.mediaCount > 0 && (
-                        <span className="text-xs text-gray-500">
-                          {connection.mediaCount} posts
-                        </span>
-                      )}
                     </div>
                   </div>
                 </div>
+                
+                {/* Page Statistics */}
+                {((connection.followersCount !== null && connection.followersCount !== undefined && connection.followersCount > 0) || 
+                 (connection.mediaCount !== null && connection.mediaCount !== undefined && connection.mediaCount > 0)) && (
+                  <div className="mt-4 flex items-center gap-4 text-sm text-gray-600">
+                    {connection.followersCount !== null && connection.followersCount !== undefined && connection.followersCount > 0 && (
+                      <div className="flex items-center gap-1.5">
+                        <Users className="h-4 w-4" />
+                        <span className="font-medium">{connection.followersCount.toLocaleString()}</span>
+                        <span className="text-gray-500">followers</span>
+                      </div>
+                    )}
+                    {connection.mediaCount !== null && connection.mediaCount !== undefined && connection.mediaCount > 0 && (
+                      <div className="flex items-center gap-1.5">
+                        <FileText className="h-4 w-4" />
+                        <span className="font-medium">{connection.mediaCount.toLocaleString()}</span>
+                        <span className="text-gray-500">posts</span>
+                      </div>
+                    )}
+                  </div>
+                )}
                 
                 {/* Auto-Bot Toggle */}
                 <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200">

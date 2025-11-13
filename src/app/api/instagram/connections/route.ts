@@ -53,6 +53,7 @@ export async function GET(request: NextRequest) {
         displayName: true,
         profileData: true,
         mediaCount: true,
+        followersCount: true,
         conversationsCount: true,
         messagingEnabled: true,
         profilePictureUrl: true,
@@ -79,21 +80,31 @@ export async function GET(request: NextRequest) {
         console.log(`🔄 Fetching fresh Instagram profile picture for @${conn.username}`);
         
         const response = await fetch(
-          `https://graph.instagram.com/me?fields=id,username,account_type,media_count,profile_picture_url&access_token=${accessToken}`
+          `https://graph.instagram.com/me?fields=id,username,account_type,media_count,followers_count,profile_picture_url&access_token=${accessToken}`
         );
         
         if (response.ok) {
           const freshData = await response.json();
           freshProfilePictureUrl = freshData.profile_picture_url || conn.profilePictureUrl;
-          console.log(`✅ Fresh profile picture fetched for @${conn.username}`);
+          const freshMediaCount = freshData.media_count || conn.mediaCount;
+          const freshFollowersCount = freshData.followers_count || conn.followersCount || 0;
+          console.log(`✅ Fresh profile data fetched for @${conn.username}`);
           
-          // Update database with fresh URL (optional, but good for fallback)
+          // Update database with fresh data
           await db.instagramConnection.update({
             where: { id: conn.id },
-            data: { profilePictureUrl: freshProfilePictureUrl },
+            data: { 
+              profilePictureUrl: freshProfilePictureUrl,
+              mediaCount: freshMediaCount,
+              followersCount: freshFollowersCount,
+            },
           });
+          
+          // Update connection object with fresh data
+          conn.mediaCount = freshMediaCount;
+          (conn as any).followersCount = freshFollowersCount;
         } else {
-          console.warn(`⚠️ Failed to fetch fresh profile for @${conn.username}, using cached URL`);
+          console.warn(`⚠️ Failed to fetch fresh profile for @${conn.username}, using cached data`);
         }
       } catch (error) {
         console.error(`❌ Error fetching fresh profile for @${conn.username}:`, error);
@@ -107,6 +118,7 @@ export async function GET(request: NextRequest) {
         displayName: conn.displayName,
         profileData: conn.profileData,
         mediaCount: conn.mediaCount,
+        followersCount: (conn as any).followersCount || 0,
         conversationsCount: conn.conversationsCount,
         messagingEnabled: conn.messagingEnabled,
         profilePictureUrl: freshProfilePictureUrl, // Use fresh URL
