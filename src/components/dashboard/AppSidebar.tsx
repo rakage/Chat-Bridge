@@ -57,7 +57,6 @@ const navigationGroups = [
   },
   {
     label: "MESSAGING",
-    emoji: "💬",
     items: [
       {
         name: "Conversations",
@@ -75,7 +74,6 @@ const navigationGroups = [
   },
   {
     label: "INTEGRATIONS",
-    emoji: "🔌",
     items: [
       {
         name: "Facebook Pages",
@@ -97,7 +95,7 @@ const navigationGroups = [
       },
       {
         name: "Chat Widget",
-        href: "/dashboard/integrations",
+        href: "/dashboard/chat-widget",
         icon: Globe,
         roles: ["OWNER", "ADMIN"],
       },
@@ -105,7 +103,6 @@ const navigationGroups = [
   },
   {
     label: "AI ASSISTANT",
-    emoji: "🤖",
     items: [
       {
         name: "Bot Settings",
@@ -129,19 +126,12 @@ const navigationGroups = [
   },
   {
     label: "WORKSPACE",
-    emoji: "👥",
     items: [
-      {
-        name: "Team Members",
-        href: "/dashboard/company",
-        icon: Users,
-        roles: ["OWNER", "ADMIN"],
-      },
       {
         name: "Company Profile",
         href: "/dashboard/company",
         icon: Building,
-        roles: ["OWNER"],
+        roles: ["OWNER", "ADMIN"],
       },
       {
         name: "Settings",
@@ -195,7 +185,6 @@ export function AppSidebar() {
           <SidebarGroup key={groupIndex}>
             {group.label && (
               <SidebarGroupLabel>
-                {group.emoji && <span className="mr-2">{group.emoji}</span>}
                 {group.label}
               </SidebarGroupLabel>
             )}
