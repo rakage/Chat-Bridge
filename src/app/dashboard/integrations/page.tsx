@@ -250,7 +250,7 @@ export default function IntegrationsPage() {
       connected: facebookCount > 0,
       connectionCount: facebookCount,
       setupUrl: "/dashboard/integrations/facebook/setup",
-      manageUrl: "/dashboard/integrations/facebook/manage",
+      manageUrl: "/dashboard/integrations/facebook",
     },
     {
       id: "instagram",
@@ -261,7 +261,7 @@ export default function IntegrationsPage() {
       connected: instagramCount > 0,
       connectionCount: instagramCount,
       setupUrl: "/dashboard/integrations/instagram/setup",
-      manageUrl: "/dashboard/integrations/instagram/manage",
+      manageUrl: "/dashboard/integrations/instagram",
     },
     {
       id: "telegram",
@@ -272,7 +272,7 @@ export default function IntegrationsPage() {
       connected: telegramCount > 0,
       connectionCount: telegramCount,
       setupUrl: "/dashboard/integrations/telegram/setup",
-      manageUrl: "/dashboard/integrations/telegram/manage",
+      manageUrl: "/dashboard/integrations/telegram",
     },
     {
       id: "whatsapp",

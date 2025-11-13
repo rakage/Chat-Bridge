@@ -77,19 +77,19 @@ const navigationGroups = [
     items: [
       {
         name: "Facebook Pages",
-        href: "/dashboard/integrations/facebook/manage",
+        href: "/dashboard/integrations/facebook",
         icon: Facebook,
         roles: ["OWNER", "ADMIN"],
       },
       {
         name: "Instagram Accounts",
-        href: "/dashboard/integrations/instagram/manage",
+        href: "/dashboard/integrations/instagram",
         icon: Instagram,
         roles: ["OWNER", "ADMIN"],
       },
       {
         name: "Telegram Bots",
-        href: "/dashboard/integrations/telegram/manage",
+        href: "/dashboard/integrations/telegram",
         icon: Send,
         roles: ["OWNER", "ADMIN"],
       },

@@ -156,7 +156,7 @@ export async function GET(request: NextRequest) {
       console.log(`✅ Instagram connection saved: @${connection.username} (ID: ${connection.id})`);
 
       return NextResponse.redirect(
-        new URL(`/dashboard/integrations/instagram/manage?success=true`, baseUrl)
+        new URL(`/dashboard/integrations/instagram?success=true`, baseUrl)
       );
 
     } catch (apiError) {

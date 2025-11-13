@@ -39,7 +39,7 @@ export default function InstagramSetupPage() {
           
           // Only redirect if save was successful
           if (saveResult.success) {
-            router.push(`/dashboard/integrations/instagram/manage?instagram_success=true&message=${encodeURIComponent(`Successfully connected Instagram account @${data.userProfile.username}!`)}`);
+            router.push(`/dashboard/integrations/instagram?instagram_success=true&message=${encodeURIComponent(`Successfully connected Instagram account @${data.userProfile.username}!`)}`);
           } else {
             // Show error message
             setError(saveResult.error || "Failed to connect Instagram account");

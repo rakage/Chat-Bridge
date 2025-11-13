@@ -80,7 +80,7 @@ export default function FacebookSetupPage() {
       
       // Redirect to manage page after successful connection
       setTimeout(() => {
-        router.push("/dashboard/integrations/facebook/manage");
+        router.push("/dashboard/integrations/facebook");
       }, 2000);
     } catch (error) {
       setError("Failed to connect Facebook pages");

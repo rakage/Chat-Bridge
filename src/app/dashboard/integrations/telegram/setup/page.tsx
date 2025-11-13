@@ -17,7 +17,7 @@ export default function TelegramSetupPage() {
   const handleSuccess = () => {
     setShowModal(false);
     // Redirect immediately to manage page with success message
-    router.push(`/dashboard/integrations/telegram/manage?telegram_success=true&message=${encodeURIComponent("Telegram bot connected successfully!")}`);
+    router.push(`/dashboard/integrations/telegram?telegram_success=true&message=${encodeURIComponent("Telegram bot connected successfully!")}`);
   };
 
   // Auto-dismiss messages
