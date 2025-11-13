@@ -11,12 +11,14 @@ import {
   LogOut,
   Building,
   GraduationCap,
-  Link as LinkIcon,
   Brain,
   Play,
   ChevronUp,
-  User2,
   Zap,
+  Facebook,
+  Instagram,
+  Send,
+  Globe,
 } from "lucide-react";
 
 import {
@@ -40,66 +42,114 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
-const navigation = [
+// Navigation structure with groups
+const navigationGroups = [
   {
-    name: "Overview",
-    href: "/dashboard",
-    icon: LayoutDashboard,
-    roles: ["OWNER", "ADMIN", "AGENT"],
+    label: null, // Dashboard has no group label
+    items: [
+      {
+        name: "Dashboard",
+        href: "/dashboard",
+        icon: LayoutDashboard,
+        roles: ["OWNER", "ADMIN", "AGENT"],
+      },
+    ],
   },
   {
-    name: "Conversations",
-    href: "/dashboard/conversations",
-    icon: MessageSquare,
-    roles: ["OWNER", "ADMIN", "AGENT"],
+    label: "MESSAGING",
+    emoji: "💬",
+    items: [
+      {
+        name: "Conversations",
+        href: "/dashboard/conversations",
+        icon: MessageSquare,
+        roles: ["OWNER", "ADMIN", "AGENT"],
+      },
+      {
+        name: "Canned Responses",
+        href: "/dashboard/canned-responses",
+        icon: Zap,
+        roles: ["OWNER", "ADMIN", "AGENT"],
+      },
+    ],
   },
   {
-    name: "Canned Responses",
-    href: "/dashboard/canned-responses",
-    icon: Zap,
-    roles: ["OWNER", "ADMIN", "AGENT"],
+    label: "INTEGRATIONS",
+    emoji: "🔌",
+    items: [
+      {
+        name: "Facebook Pages",
+        href: "/dashboard/integrations/facebook/manage",
+        icon: Facebook,
+        roles: ["OWNER", "ADMIN"],
+      },
+      {
+        name: "Instagram Accounts",
+        href: "/dashboard/integrations/instagram/manage",
+        icon: Instagram,
+        roles: ["OWNER", "ADMIN"],
+      },
+      {
+        name: "Telegram Bots",
+        href: "/dashboard/integrations/telegram/manage",
+        icon: Send,
+        roles: ["OWNER", "ADMIN"],
+      },
+      {
+        name: "Chat Widget",
+        href: "/dashboard/integrations",
+        icon: Globe,
+        roles: ["OWNER", "ADMIN"],
+      },
+    ],
   },
   {
-    name: "Integrations",
-    href: "/dashboard/integrations",
-    icon: LinkIcon,
-    roles: ["OWNER", "ADMIN"],
+    label: "AI ASSISTANT",
+    emoji: "🤖",
+    items: [
+      {
+        name: "Bot Settings",
+        href: "/dashboard/llm-config",
+        icon: Brain,
+        roles: ["OWNER", "ADMIN"],
+      },
+      {
+        name: "Train Knowledge",
+        href: "/dashboard/training",
+        icon: GraduationCap,
+        roles: ["OWNER", "ADMIN"],
+      },
+      {
+        name: "Test Playground",
+        href: "/dashboard/playground",
+        icon: Play,
+        roles: ["OWNER", "ADMIN", "AGENT"],
+      },
+    ],
   },
   {
-    name: "LLM Config",
-    href: "/dashboard/llm-config",
-    icon: Brain,
-    roles: ["OWNER", "ADMIN"],
-  },
-  {
-    name: "LLM Training",
-    href: "/dashboard/training",
-    icon: GraduationCap,
-    roles: ["OWNER", "ADMIN"],
-  },
-  {
-    name: "Playground",
-    href: "/dashboard/playground",
-    icon: Play,
-    roles: ["OWNER", "ADMIN", "AGENT"],
-  },
-  {
-    name: "Users",
-    href: "/dashboard/users",
-    icon: Users,
-    roles: ["OWNER", "ADMIN"],
-  },
-  {
-    name: "Company",
-    href: "/dashboard/company",
-    icon: Building,
-    roles: ["OWNER"],
-  },
-  {
-    name: "Settings",
-    href: "/dashboard/settings",
-    icon: Settings,
-    roles: ["OWNER", "ADMIN", "AGENT"],
+    label: "WORKSPACE",
+    emoji: "👥",
+    items: [
+      {
+        name: "Team Members",
+        href: "/dashboard/company",
+        icon: Users,
+        roles: ["OWNER", "ADMIN"],
+      },
+      {
+        name: "Company Profile",
+        href: "/dashboard/company",
+        icon: Building,
+        roles: ["OWNER"],
+      },
+      {
+        name: "Settings",
+        href: "/dashboard/settings",
+        icon: Settings,
+        roles: ["OWNER", "ADMIN", "AGENT"],
+      },
+    ],
   },
 ];
 
@@ -108,9 +158,16 @@ export function AppSidebar() {
   const pathname = usePathname();
 
   const userRole = session?.user?.role;
-  const filteredNavigation = navigation.filter((item) =>
-    item.roles.includes(userRole as string)
-  );
+
+  // Filter groups based on user role
+  const filteredGroups = navigationGroups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) =>
+        item.roles.includes(userRole as string)
+      ),
+    }))
+    .filter((group) => group.items.length > 0); // Remove empty groups
 
   return (
     <Sidebar collapsible="icon">
@@ -123,11 +180,9 @@ export function AppSidebar() {
                   <LayoutDashboard className="size-4" />
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-semibold">
-                    Bot Dashboard
-                  </span>
+                  <span className="truncate font-semibold">ChatBridge</span>
                   <span className="truncate text-xs">
-                    {session?.user?.companyName || "Facebook Bot"}
+                    {session?.user?.companyName || "Messaging Platform"}
                   </span>
                 </div>
               </a>
@@ -136,26 +191,37 @@ export function AppSidebar() {
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>Navigation</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {filteredNavigation.map((item) => {
-                const isActive = pathname === item.href;
-                return (
-                  <SidebarMenuItem key={item.name}>
-                    <SidebarMenuButton asChild isActive={isActive} tooltip={item.name}>
-                      <Link href={item.href}>
-                        <item.icon />
-                        <span>{item.name}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {filteredGroups.map((group, groupIndex) => (
+          <SidebarGroup key={groupIndex}>
+            {group.label && (
+              <SidebarGroupLabel>
+                {group.emoji && <span className="mr-2">{group.emoji}</span>}
+                {group.label}
+              </SidebarGroupLabel>
+            )}
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {group.items.map((item) => {
+                  const isActive = pathname === item.href;
+                  return (
+                    <SidebarMenuItem key={item.name}>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={isActive}
+                        tooltip={item.name}
+                      >
+                        <Link href={item.href}>
+                          <item.icon />
+                          <span>{item.name}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ))}
       </SidebarContent>
       <SidebarFooter>
         <SidebarMenu>
@@ -167,7 +233,10 @@ export function AppSidebar() {
                   className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
                 >
                   <Avatar className="h-8 w-8 rounded-lg">
-                    <AvatarImage src={session?.user?.image || ""} alt={session?.user?.name || "User"} />
+                    <AvatarImage
+                      src={session?.user?.image || ""}
+                      alt={session?.user?.name || "User"}
+                    />
                     <AvatarFallback className="rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
                       {session?.user?.name?.charAt(0) ||
                         session?.user?.email?.charAt(0) ||
