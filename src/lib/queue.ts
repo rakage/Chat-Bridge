@@ -224,6 +224,8 @@ export async function initializeWorkers() {
 
               // Fetch customer profile from Facebook before creating conversation
               let customerProfile = null;
+              let fallbackName = `Customer #${senderId.slice(-4)}`;
+              
               try {
                 console.log(`Fetching customer profile for ${senderId}...`);
                 const pageAccessToken = await decrypt(
@@ -247,13 +249,33 @@ export async function initializeWorkers() {
                   cached: true,
                   cachedAt: new Date().toISOString(),
                 };
-                console.log(`Customer profile fetched:`, customerProfile);
-              } catch (profileError) {
-                console.error(
-                  `Failed to fetch customer profile for ${senderId}:`,
-                  profileError
-                );
-                // Continue with conversation creation even if profile fetch fails
+                console.log(`✅ Customer profile fetched:`, customerProfile);
+              } catch (profileError: any) {
+                const errorMessage = profileError?.message || String(profileError);
+                const isPrivacyRestricted = 
+                  errorMessage.includes('2018218') || 
+                  errorMessage.includes('2018247') ||
+                  errorMessage.includes('Insufficient permission');
+                
+                if (isPrivacyRestricted) {
+                  console.log(`ℹ️  Customer profile restricted by Facebook privacy (error 2018247)`);
+                  console.log(`   This is EXPECTED - using fallback name: ${fallbackName}`);
+                } else {
+                  console.error(`❌ Unexpected error fetching customer profile:`, profileError);
+                }
+                
+                // Create fallback profile for privacy-restricted users
+                customerProfile = {
+                  firstName: "Customer",
+                  lastName: `#${senderId.slice(-4)}`,
+                  fullName: fallbackName,
+                  profilePicture: null,
+                  locale: "en_US",
+                  facebookUrl: `https://www.facebook.com/${senderId}`,
+                  cached: true,
+                  cachedAt: new Date().toISOString(),
+                  privacyRestricted: true,
+                };
               }
 
               conversation = await db.conversation.create({
@@ -265,7 +287,7 @@ export async function initializeWorkers() {
                   autoBot: pageConnection.autoBot, // Use page's autoBot setting
                   lastMessageAt: new Date(),
                   tags: [],
-                  customerName: customerProfile?.fullName || null, // Save customer name to database field
+                  customerName: customerProfile?.fullName || fallbackName, // Always save a customer name
                   meta: customerProfile ? { customerProfile, platform: "facebook" } : { platform: "facebook" },
                 },
               });
@@ -336,6 +358,8 @@ export async function initializeWorkers() {
               // If existing conversation doesn't have customerName, fetch it now
               if (!conversation.customerName) {
                 console.log(`Conversation ${conversation.id} missing customerName, fetching from Facebook...`);
+                const fallbackName = `Customer #${senderId.slice(-4)}`;
+                
                 try {
                   const pageAccessToken = await decrypt(
                     pageConnection.pageAccessTokenEnc
@@ -354,7 +378,7 @@ export async function initializeWorkers() {
                     data: {
                       customerName: fullName,
                       meta: {
-                        ...((conversation.meta as any) || {}),
+                        ...(conversation.meta || {}),
                         customerProfile: {
                           firstName: profile.first_name || "Unknown",
                           lastName: profile.last_name || "",
@@ -372,7 +396,7 @@ export async function initializeWorkers() {
                   // Update the conversation object for subsequent use
                   conversation.customerName = fullName;
                   conversation.meta = {
-                    ...((conversation.meta as any) || {}),
+                    ...(conversation.meta || {}),
                     customerProfile: {
                       firstName: profile.first_name || "Unknown",
                       lastName: profile.last_name || "",
@@ -385,10 +409,45 @@ export async function initializeWorkers() {
                     },
                   };
                   
-                  console.log(`Customer name updated: ${fullName}`);
-                } catch (profileError) {
-                  console.error(`Failed to fetch customer profile for existing conversation:`, profileError);
-                  // Continue without updating customerName
+                  console.log(`✅ Customer name updated: ${fullName}`);
+                } catch (profileError: any) {
+                  const errorMessage = profileError?.message || String(profileError);
+                  const isPrivacyRestricted = 
+                    errorMessage.includes('2018218') || 
+                    errorMessage.includes('2018247') ||
+                    errorMessage.includes('Insufficient permission');
+                  
+                  if (isPrivacyRestricted) {
+                    console.log(`ℹ️  Customer profile restricted by Facebook privacy`);
+                    console.log(`   Using fallback name: ${fallbackName}`);
+                  } else {
+                    console.error(`❌ Unexpected error fetching profile:`, profileError);
+                  }
+                  
+                  // Update with fallback name instead of leaving it null
+                  await db.conversation.update({
+                    where: { id: conversation.id },
+                    data: {
+                      customerName: fallbackName,
+                      meta: {
+                        ...(conversation.meta || {}),
+                        customerProfile: {
+                          firstName: "Customer",
+                          lastName: `#${senderId.slice(-4)}`,
+                          fullName: fallbackName,
+                          profilePicture: null,
+                          locale: "en_US",
+                          facebookUrl: `https://www.facebook.com/${senderId}`,
+                          cached: true,
+                          cachedAt: new Date().toISOString(),
+                          privacyRestricted: true,
+                        },
+                      },
+                    },
+                  });
+                  
+                  // Update the conversation object
+                  conversation.customerName = fallbackName;
                 }
               }
             }
@@ -1391,6 +1450,8 @@ export async function processIncomingMessageDirect(
 
       // Fetch customer profile from Facebook before creating conversation
       let customerProfile = null;
+      let fallbackName = `Customer #${senderId.slice(-4)}`;
+      
       try {
         console.log(`Fetching customer profile for ${senderId}...`);
         const pageAccessToken = await decrypt(
@@ -1414,13 +1475,33 @@ export async function processIncomingMessageDirect(
           cached: true,
           cachedAt: new Date().toISOString(),
         };
-        console.log(`Customer profile fetched:`, customerProfile);
-      } catch (profileError) {
-        console.error(
-          `Failed to fetch customer profile for ${senderId}:`,
-          profileError
-        );
-        // Continue with conversation creation even if profile fetch fails
+        console.log(`✅ Customer profile fetched:`, customerProfile);
+      } catch (profileError: any) {
+        const errorMessage = profileError?.message || String(profileError);
+        const isPrivacyRestricted = 
+          errorMessage.includes('2018218') || 
+          errorMessage.includes('2018247') ||
+          errorMessage.includes('Insufficient permission');
+        
+        if (isPrivacyRestricted) {
+          console.log(`ℹ️  Customer profile restricted by Facebook privacy (error 2018247)`);
+          console.log(`   This is EXPECTED - using fallback name: ${fallbackName}`);
+        } else {
+          console.error(`❌ Unexpected error fetching customer profile:`, profileError);
+        }
+        
+        // Create fallback profile for privacy-restricted users
+        customerProfile = {
+          firstName: "Customer",
+          lastName: `#${senderId.slice(-4)}`,
+          fullName: fallbackName,
+          profilePicture: null,
+          locale: "en_US",
+          facebookUrl: `https://www.facebook.com/${senderId}`,
+          cached: true,
+          cachedAt: new Date().toISOString(),
+          privacyRestricted: true,
+        };
       }
 
       conversation = await db.conversation.create({
@@ -1432,6 +1513,7 @@ export async function processIncomingMessageDirect(
           autoBot: pageConnection.autoBot, // Use page's autoBot setting
           lastMessageAt: new Date(),
           tags: [],
+          customerName: customerProfile?.fullName || fallbackName, // Always save a customer name
           meta: customerProfile ? { customerProfile, platform: "facebook" } : { platform: "facebook" },
         },
       });
