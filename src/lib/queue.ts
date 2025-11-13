@@ -378,7 +378,7 @@ export async function initializeWorkers() {
                     data: {
                       customerName: fullName,
                       meta: {
-                        ...(conversation.meta || {}),
+                        ...((conversation.meta as any) || {}),
                         customerProfile: {
                           firstName: profile.first_name || "Unknown",
                           lastName: profile.last_name || "",
@@ -396,7 +396,7 @@ export async function initializeWorkers() {
                   // Update the conversation object for subsequent use
                   conversation.customerName = fullName;
                   conversation.meta = {
-                    ...(conversation.meta || {}),
+                    ...((conversation.meta as any) || {}),
                     customerProfile: {
                       firstName: profile.first_name || "Unknown",
                       lastName: profile.last_name || "",
@@ -430,7 +430,7 @@ export async function initializeWorkers() {
                     data: {
                       customerName: fallbackName,
                       meta: {
-                        ...(conversation.meta || {}),
+                        ...((conversation.meta as any) || {}),
                         customerProfile: {
                           firstName: "Customer",
                           lastName: `#${senderId.slice(-4)}`,
