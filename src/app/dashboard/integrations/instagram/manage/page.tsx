@@ -10,7 +10,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { ProfilePicture } from "@/components/ProfilePicture";
 import { DeleteSocialConfirmDialog } from "@/components/DeleteSocialConfirmDialog";
-import { AlertCircle, CheckCircle, ArrowLeft, Trash2, Plus, Bot } from "lucide-react";
+import { AlertCircle, CheckCircle, ArrowLeft, Trash2, Plus, Bot, MoreVertical, RefreshCw } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export default function InstagramManagePage() {
   const router = useRouter();
@@ -128,6 +134,11 @@ export default function InstagramManagePage() {
         return newSet;
       });
     }
+  };
+
+  const handleReconnect = (connectionId: string) => {
+    // Redirect to Instagram OAuth with the connection ID as state
+    router.push(`/dashboard/integrations/instagram/setup?reconnect=${connectionId}`);
   };
 
   const handleDisconnect = async () => {
@@ -272,6 +283,23 @@ export default function InstagramManagePage() {
           {instagramConnections.map((connection) => (
             <Card key={connection.instagramUserId} className="relative hover:shadow-md transition-shadow">
               <CardContent className="p-6">
+                {/* Three-dots menu */}
+                <div className="absolute top-4 right-4">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => handleReconnect(connection.id)}>
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                        Reconnect Account
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+
                 <div className="flex items-start space-x-4">
                   <div className="flex-shrink-0">
                     <ProfilePicture 
@@ -281,7 +309,7 @@ export default function InstagramManagePage() {
                       size="md"
                     />
                   </div>
-                  <div className="flex-1 min-w-0">
+                  <div className="flex-1 min-w-0 pr-8">
                     <h3 className="font-semibold text-gray-900 truncate text-lg">
                       @{connection.username}
                     </h3>

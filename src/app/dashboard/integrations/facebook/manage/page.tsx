@@ -10,7 +10,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { ProfilePicture } from "@/components/ProfilePicture";
 import { DeleteSocialConfirmDialog } from "@/components/DeleteSocialConfirmDialog";
-import { AlertCircle, CheckCircle, ArrowLeft, Trash2, Plus, Bot, Users, FileText } from "lucide-react";
+import { AlertCircle, CheckCircle, ArrowLeft, Trash2, Plus, Bot, Users, FileText, MoreVertical, RefreshCw } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export default function FacebookManagePage() {
   const router = useRouter();
@@ -128,6 +134,11 @@ export default function FacebookManagePage() {
         return newSet;
       });
     }
+  };
+
+  const handleReconnect = (pageId: string) => {
+    // Redirect to Facebook OAuth with the page ID as state
+    router.push(`/dashboard/integrations/facebook/setup?reconnect=${pageId}`);
   };
 
   const handleDisconnectPage = async () => {
@@ -270,6 +281,23 @@ export default function FacebookManagePage() {
           {pageConnections.map((page) => (
             <Card key={page.id} className="relative hover:shadow-md transition-shadow">
               <CardContent className="p-6">
+                {/* Three-dots menu */}
+                <div className="absolute top-4 right-4">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => handleReconnect(page.pageId)}>
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                        Reconnect Page
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+
                 <div className="flex items-start space-x-4">
                   <div className="flex-shrink-0">
                     <ProfilePicture 
@@ -279,7 +307,7 @@ export default function FacebookManagePage() {
                       size="md"
                     />
                   </div>
-                  <div className="flex-1 min-w-0">
+                  <div className="flex-1 min-w-0 pr-8">
                     <h3 className="font-semibold text-gray-900 truncate text-lg">
                       {page.pageName}
                     </h3>
