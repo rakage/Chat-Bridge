@@ -265,6 +265,7 @@ export async function initializeWorkers() {
                   autoBot: pageConnection.autoBot, // Use page's autoBot setting
                   lastMessageAt: new Date(),
                   tags: [],
+                  customerName: customerProfile?.fullName || null, // Save customer name to database field
                   meta: customerProfile ? { customerProfile, platform: "facebook" } : { platform: "facebook" },
                 },
               });
@@ -331,6 +332,65 @@ export async function initializeWorkers() {
               console.log(
                 `Existing conversation found with ID: ${conversation.id}`
               );
+              
+              // If existing conversation doesn't have customerName, fetch it now
+              if (!conversation.customerName) {
+                console.log(`Conversation ${conversation.id} missing customerName, fetching from Facebook...`);
+                try {
+                  const pageAccessToken = await decrypt(
+                    pageConnection.pageAccessTokenEnc
+                  );
+                  const profile = await facebookAPI.getUserProfile(
+                    senderId,
+                    pageAccessToken,
+                    ["first_name", "last_name", "profile_pic", "locale"]
+                  );
+
+                  const fullName = `${profile.first_name || "Unknown"} ${profile.last_name || ""}`.trim();
+                  
+                  // Update conversation with customer name
+                  await db.conversation.update({
+                    where: { id: conversation.id },
+                    data: {
+                      customerName: fullName,
+                      meta: {
+                        ...((conversation.meta as any) || {}),
+                        customerProfile: {
+                          firstName: profile.first_name || "Unknown",
+                          lastName: profile.last_name || "",
+                          fullName: fullName,
+                          profilePicture: profile.profile_pic || null,
+                          locale: profile.locale || "en_US",
+                          facebookUrl: `https://www.facebook.com/${senderId}`,
+                          cached: true,
+                          cachedAt: new Date().toISOString(),
+                        },
+                      },
+                    },
+                  });
+                  
+                  // Update the conversation object for subsequent use
+                  conversation.customerName = fullName;
+                  conversation.meta = {
+                    ...((conversation.meta as any) || {}),
+                    customerProfile: {
+                      firstName: profile.first_name || "Unknown",
+                      lastName: profile.last_name || "",
+                      fullName: fullName,
+                      profilePicture: profile.profile_pic || null,
+                      locale: profile.locale || "en_US",
+                      facebookUrl: `https://www.facebook.com/${senderId}`,
+                      cached: true,
+                      cachedAt: new Date().toISOString(),
+                    },
+                  };
+                  
+                  console.log(`Customer name updated: ${fullName}`);
+                } catch (profileError) {
+                  console.error(`Failed to fetch customer profile for existing conversation:`, profileError);
+                  // Continue without updating customerName
+                }
+              }
             }
 
             // Check for duplicate messages (race condition protection)

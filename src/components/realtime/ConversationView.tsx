@@ -666,8 +666,9 @@ export default function ConversationView({
             platformUrl = undefined;
             platformName = "widget";
           } else {
-            firstName = "Customer";
-            fullName = `Customer #${conversation.psid.slice(-4)}`;
+            // Facebook - use customerName if available
+            firstName = conversation.customerName?.split(' ')[0] || "Customer";
+            fullName = conversation.customerName || `Customer #${conversation.psid.slice(-4)}`;
             platformUrl = `https://www.facebook.com/${conversation.psid}`;
             platformName = "facebook";
           }
@@ -725,8 +726,9 @@ export default function ConversationView({
           platformUrl = undefined;
           platformName = "widget";
         } else {
-          firstName = "Customer";
-          fullName = `Customer #${conversation.psid.slice(-4)}`;
+          // Facebook - use customerName if available
+          firstName = conversation.customerName?.split(' ')[0] || "Customer";
+          fullName = conversation.customerName || `Customer #${conversation.psid.slice(-4)}`;
           platformUrl = `https://www.facebook.com/${conversation.psid}`;
           platformName = "facebook";
         }
