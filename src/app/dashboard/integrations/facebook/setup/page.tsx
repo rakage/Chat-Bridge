@@ -120,9 +120,9 @@ export default function FacebookSetupPage() {
             </Button>
           </Link>
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Select Facebook Pages</h1>
+            <h1 className="text-3xl font-bold text-gray-900">Connect Facebook Pages</h1>
             <p className="text-gray-600 mt-1">
-              Choose which pages you want to connect
+              Select the pages you want to manage through ChatBridge
             </p>
           </div>
         </div>

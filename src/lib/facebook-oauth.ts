@@ -25,6 +25,13 @@ export interface FacebookPage {
   access_token: string;
   category: string;
   tasks: string[];
+  picture?: {
+    data?: {
+      url?: string;
+    };
+  };
+  followers_count?: number;
+  fan_count?: number;
 }
 
 export interface FacebookPagesResponse {
@@ -178,7 +185,7 @@ export class FacebookOAuth {
    */
   async getUserPages(accessToken: string): Promise<FacebookPage[]> {
     const response = await fetch(
-      `https://graph.facebook.com/v23.0/me/accounts?fields=id,name,access_token,category,tasks&access_token=${accessToken}`
+      `https://graph.facebook.com/v23.0/me/accounts?fields=id,name,access_token,category,tasks,picture,followers_count,fan_count&access_token=${accessToken}`
     );
 
     if (!response.ok) {

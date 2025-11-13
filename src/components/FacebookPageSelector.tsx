@@ -5,13 +5,16 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { Facebook, CheckCircle, AlertCircle } from "lucide-react";
+import { Facebook, CheckCircle, AlertCircle, Users } from "lucide-react";
+import { ProfilePicture } from "@/components/ProfilePicture";
 
 export interface FacebookPageData {
   id: string;
   name: string;
   category: string;
   access_token: string;
+  picture?: string | null;
+  followers_count?: number;
 }
 
 export interface FacebookUserProfile {
@@ -76,10 +79,6 @@ export function FacebookPageSelector({
   return (
     <Card className="w-full max-w-4xl mx-auto">
       <CardHeader>
-        <CardTitle className="flex items-center space-x-2">
-          <Facebook className="h-5 w-5 text-blue-600" />
-          <span>Select Facebook Pages to Connect</span>
-        </CardTitle>
         <div className="flex items-center justify-between">
           <p className="text-sm text-gray-600">
             Connected as <strong>{userProfile.name}</strong> • Found{" "}
@@ -139,20 +138,27 @@ export function FacebookPageSelector({
                       className="mt-1"
                     />
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center space-x-2">
-                        <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                          <Facebook className="h-5 w-5 text-blue-600" />
-                        </div>
+                      <div className="flex items-start space-x-3">
+                        <ProfilePicture
+                          src={page.picture || undefined}
+                          alt={`${page.name} profile`}
+                          platform="facebook"
+                          size="md"
+                        />
                         <div className="flex-1 min-w-0">
                           <h3 className="font-medium text-gray-900 truncate">
                             {page.name}
                           </h3>
-                          <p className="text-sm text-gray-500 truncate">
-                            ID: {page.id}
-                          </p>
                           <Badge variant="secondary" className="text-xs mt-1">
                             {page.category}
                           </Badge>
+                          {page.followers_count !== undefined && page.followers_count > 0 && (
+                            <div className="flex items-center gap-1.5 mt-2 text-sm text-gray-600">
+                              <Users className="h-4 w-4" />
+                              <span className="font-medium">{page.followers_count.toLocaleString()}</span>
+                              <span className="text-gray-500">followers</span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
