@@ -561,7 +561,7 @@ export class FacebookAPI {
   }> {
     try {
       const response = await fetch(
-        `https://graph.facebook.com/${this.apiVersion}/me?fields=followers_count,published_posts.limit(0).summary(true)&access_token=${pageAccessToken}`
+        `https://graph.facebook.com/${this.apiVersion}/me?fields=followers_count,fan_count,published_posts.limit(0).summary(true)&access_token=${pageAccessToken}`
       );
 
       if (!response.ok) {
@@ -574,7 +574,7 @@ export class FacebookAPI {
       const data = await response.json();
       
       return {
-        followersCount: data.followers_count || 0,
+        followersCount: data.followers_count || data.fan_count || 0,
         postsCount: data.published_posts?.summary?.total_count || 0,
       };
     } catch (error) {
