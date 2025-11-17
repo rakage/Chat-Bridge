@@ -137,8 +137,7 @@ export default function FacebookManagePage() {
   };
 
   const handleReconnect = (pageId: string) => {
-    // Redirect to Facebook OAuth with the page ID as state
-    router.push(`/dashboard/integrations/facebook/setup?reconnect=${pageId}`);
+    router.push(`/dashboard/integrations/facebook/setup`);
   };
 
   const handleDisconnectPage = async () => {

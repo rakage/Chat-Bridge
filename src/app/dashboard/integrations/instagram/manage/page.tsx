@@ -137,8 +137,7 @@ export default function InstagramManagePage() {
   };
 
   const handleReconnect = (connectionId: string) => {
-    // Redirect to Instagram OAuth with the connection ID as state
-    router.push(`/dashboard/integrations/instagram/setup?reconnect=${connectionId}`);
+    router.push(`/dashboard/integrations/instagram/setup`);
   };
 
   const handleDisconnect = async () => {
