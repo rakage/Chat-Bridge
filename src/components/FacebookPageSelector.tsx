@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Facebook, CheckCircle, AlertCircle, Users, FileText } from "lucide-react";
 import { ProfilePicture } from "@/components/ProfilePicture";
@@ -127,17 +126,12 @@ export function FacebookPageSelector({
                   key={page.id}
                   className={`border rounded-lg p-4 transition-colors cursor-pointer ${
                     selectedPageIds.has(page.id)
-                      ? "border-blue-500 bg-blue-50"
+                      ? "border-black bg-gray-50"
                       : "border-gray-200 hover:border-gray-300"
                   }`}
                   onClick={() => handlePageToggle(page.id)}
                 >
                   <div className="flex items-start space-x-3">
-                    <Checkbox
-                      checked={selectedPageIds.has(page.id)}
-                      onChange={() => handlePageToggle(page.id)}
-                      className="mt-1"
-                    />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start space-x-3">
                         <ProfilePicture
@@ -176,7 +170,7 @@ export function FacebookPageSelector({
                       </div>
                     </div>
                     {selectedPageIds.has(page.id) && (
-                      <CheckCircle className="h-5 w-5 text-blue-600 flex-shrink-0" />
+                      <CheckCircle className="h-5 w-5 text-black flex-shrink-0" />
                     )}
                   </div>
                 </div>
