@@ -6,13 +6,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { FacebookLoginButton } from "@/components/FacebookLoginButton";
 import { FacebookPageSelector, FacebookPageData, FacebookUserProfile } from "@/components/FacebookPageSelector";
-import { AlertCircle, CheckCircle, ArrowLeft } from "lucide-react";
+import { AlertCircle, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 
 export default function FacebookSetupPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState("");
   const [error, setError] = useState("");
   const [showPageSelector, setShowPageSelector] = useState(false);
   const [facebookUserProfile, setFacebookUserProfile] = useState<FacebookUserProfile | null>(null);
@@ -72,16 +71,13 @@ export default function FacebookSetupPage() {
 
       const result = await response.json();
       if (result.errors && result.errors.length > 0) {
-        setError(`Connected ${result.connectedPages.length} pages, but ${result.errors.length} failed. Check console for details.`);
+        const errorMessage = `Connected ${result.connectedPages.length} pages, but ${result.errors.length} failed. Check console for details.`;
         console.error("Some pages failed to connect:", result.errors);
+        router.push(`/dashboard/integrations/facebook?error=${encodeURIComponent(errorMessage)}`);
       } else {
-        setSuccess(`Successfully connected ${result.connectedPages.length} Facebook page${result.connectedPages.length !== 1 ? 's' : ''}!`);
+        const successMessage = `Successfully connected ${result.connectedPages.length} Facebook page${result.connectedPages.length !== 1 ? 's' : ''}!`;
+        router.push(`/dashboard/integrations/facebook?facebook_success=true&message=${encodeURIComponent(successMessage)}`);
       }
-      
-      // Redirect to manage page after successful connection
-      setTimeout(() => {
-        router.push("/dashboard/integrations/facebook");
-      }, 2000);
     } catch (error) {
       setError("Failed to connect Facebook pages");
       console.error("Facebook pages connect error:", error);
@@ -94,14 +90,7 @@ export default function FacebookSetupPage() {
     setFacebookPages([]);
   };
 
-  // Auto-dismiss messages
-  useEffect(() => {
-    if (success) {
-      const timer = setTimeout(() => setSuccess(""), 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [success]);
-
+  // Auto-dismiss error messages
   useEffect(() => {
     if (error) {
       const timer = setTimeout(() => setError(""), 5000);
@@ -126,13 +115,6 @@ export default function FacebookSetupPage() {
             </p>
           </div>
         </div>
-
-        {success && (
-          <div className="flex items-center p-4 text-green-700 bg-green-100 rounded-lg">
-            <CheckCircle className="h-5 w-5 mr-2" />
-            <span>{success}</span>
-          </div>
-        )}
 
         {error && (
           <div className="flex items-center p-4 text-red-700 bg-red-100 rounded-lg">
@@ -167,13 +149,6 @@ export default function FacebookSetupPage() {
           </p>
         </div>
       </div>
-
-      {success && (
-        <div className="flex items-center p-4 text-green-700 bg-green-100 rounded-lg">
-          <CheckCircle className="h-5 w-5 mr-2" />
-          <span>{success}</span>
-        </div>
-      )}
 
       {error && (
         <div className="flex items-center p-4 text-red-700 bg-red-100 rounded-lg">
