@@ -111,26 +111,28 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Get company's provider config for embeddings
-    let embeddingApiKey: string | undefined;
-    let embeddingProvider: "OPENAI" | "GEMINI" = "OPENAI";
-    
-    try {
-      const providerConfig = await db.providerConfig.findUnique({
-        where: { companyId: user.companyId },
-      });
+    // Get company's provider config for embeddings (REQUIRED)
+    const providerConfig = await db.providerConfig.findUnique({
+      where: { companyId: user.companyId },
+    });
 
-      if (providerConfig && providerConfig.apiKeyEnc) {
-        const { decrypt } = await import("@/lib/encryption");
-        embeddingApiKey = await decrypt(providerConfig.apiKeyEnc);
-        embeddingProvider = providerConfig.provider as "OPENAI" | "GEMINI";
-        console.log(`🔑 Training: Using company's ${providerConfig.provider} API key for embeddings`);
-      } else {
-        console.log(`🔑 Training: No provider config, using environment OpenAI API key`);
-      }
-    } catch (error) {
-      console.log(`⚠️ Training: Could not retrieve company API key:`, error);
+    if (!providerConfig || !providerConfig.apiKeyEnc) {
+      return NextResponse.json(
+        {
+          error:
+            "LLM configuration required. Please configure your AI provider in LLM Config page before training documents.",
+        },
+        { status: 400 }
+      );
     }
+
+    const { decrypt } = await import("@/lib/encryption");
+    const embeddingApiKey = await decrypt(providerConfig.apiKeyEnc);
+    const embeddingProvider = providerConfig.provider as "OPENAI" | "GEMINI";
+    
+    console.log(
+      `🔑 Training: Using company's ${providerConfig.provider} API key for embeddings`
+    );
 
     // Start training process in background
     processTrainingAsync(trainingSession.id, documents, settings, embeddingApiKey, embeddingProvider).catch(

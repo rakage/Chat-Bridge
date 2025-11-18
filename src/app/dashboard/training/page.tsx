@@ -80,6 +80,12 @@ export default function TrainingPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [dataLoaded, setDataLoaded] = useState(false);
+  const [llmConfig, setLlmConfig] = useState<{
+    provider: string;
+    model: string;
+    hasApiKey: boolean;
+  } | null>(null);
+  const [llmConfigLoading, setLlmConfigLoading] = useState(true);
 
   // Load cached data on component mount
   useEffect(() => {
@@ -120,6 +126,22 @@ export default function TrainingPage() {
       router.push("/dashboard");
     }
   }, [session, sessionStatus, router]);
+
+  // Load LLM config
+  const loadLlmConfig = useCallback(async () => {
+    try {
+      setLlmConfigLoading(true);
+      const response = await fetch("/api/settings/provider");
+      if (response.ok) {
+        const data = await response.json();
+        setLlmConfig(data.config);
+      }
+    } catch (error) {
+      console.error("Error loading LLM config:", error);
+    } finally {
+      setLlmConfigLoading(false);
+    }
+  }, []);
 
   // Load data - only once when component mounts and user is authenticated
   const loadData = useCallback(
@@ -173,8 +195,9 @@ export default function TrainingPage() {
     if (sessionStatus === "unauthenticated") return;
     if (!session?.user) return;
 
+    loadLlmConfig();
     loadData();
-  }, [sessionStatus, session?.user, loadData]);
+  }, [sessionStatus, session?.user, loadLlmConfig, loadData]);
 
   // Poll for processing documents
   useEffect(() => {
@@ -503,6 +526,60 @@ export default function TrainingPage() {
         </div>
       )}
 
+      {/* LLM Config Warning */}
+      {!llmConfigLoading && !llmConfig?.hasApiKey && (
+        <Card className="border-yellow-200 bg-yellow-50">
+          <CardContent className="pt-6">
+            <div className="flex items-start space-x-3">
+              <div className="flex-shrink-0">
+                <AlertCircle className="h-6 w-6 text-yellow-600" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-yellow-900 mb-2">
+                  LLM Configuration Required
+                </h3>
+                <p className="text-sm text-yellow-800 mb-4">
+                  Before you can train documents, you need to set up your AI language model provider in the LLM Config page.
+                  The system will use your configured provider's embeddings for training:
+                </p>
+                <ul className="text-sm text-yellow-800 mb-4 list-disc list-inside space-y-1">
+                  <li>If using <strong>OpenAI</strong>, embeddings will be generated using OpenAI's embedding model</li>
+                  <li>If using <strong>Google Gemini</strong>, embeddings will be generated using Google's embedding model</li>
+                </ul>
+                <Button
+                  onClick={() => router.push("/dashboard/llm-config")}
+                  className="bg-yellow-600 hover:bg-yellow-700 text-white"
+                >
+                  <Settings className="h-4 w-4 mr-2" />
+                  Go to LLM Config
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Provider Info */}
+      {!llmConfigLoading && llmConfig?.hasApiKey && (
+        <Card className="border-blue-200 bg-blue-50">
+          <CardContent className="pt-6">
+            <div className="flex items-start space-x-3">
+              <div className="flex-shrink-0">
+                <CheckCircle className="h-6 w-6 text-blue-600" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-sm font-semibold text-blue-900 mb-1">
+                  AI Provider Configured
+                </h3>
+                <p className="text-sm text-blue-800">
+                  Training will use <strong>{llmConfig.provider}</strong> ({llmConfig.model}) embeddings for your documents.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Document Upload */}
         <div className="lg:col-span-2 space-y-6">
@@ -533,17 +610,26 @@ export default function TrainingPage() {
                       multiple
                       accept=".pdf,.doc,.docx,.txt"
                       onChange={handleFileUpload}
-                      disabled={uploadLoading}
+                      disabled={uploadLoading || !llmConfig?.hasApiKey}
                       className="hidden"
                     />
                     <label
                       htmlFor="file-upload"
-                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 cursor-pointer"
+                      className={`inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
+                        uploadLoading || !llmConfig?.hasApiKey
+                          ? "bg-gray-400 cursor-not-allowed opacity-50"
+                          : "bg-blue-600 hover:bg-blue-700 cursor-pointer"
+                      }`}
                     >
                       {uploadLoading ? (
                         <>
                           <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                           Uploading...
+                        </>
+                      ) : !llmConfig?.hasApiKey ? (
+                        <>
+                          <AlertCircle className="h-4 w-4 mr-2" />
+                          Configure LLM First
                         </>
                       ) : (
                         <>
@@ -670,6 +756,7 @@ export default function TrainingPage() {
                 <Button
                   onClick={handleStartTraining}
                   disabled={
+                    !llmConfig?.hasApiKey ||
                     selectedDocuments.length === 0 ||
                     trainingLoading ||
                     trainingSessions.some((s) =>
@@ -683,6 +770,11 @@ export default function TrainingPage() {
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                       Processing Documents...
+                    </>
+                  ) : !llmConfig?.hasApiKey ? (
+                    <>
+                      <AlertCircle className="h-4 w-4 mr-2" />
+                      LLM Config Required
                     </>
                   ) : (
                     <>
