@@ -814,23 +814,10 @@ export default function ChatWidgetPage() {
               </div>
             </div>
           </Card>
-
-          <Card className="p-6">
-            <h2 className="text-lg font-semibold mb-4">Installation Instructions</h2>
-            <ol className="list-decimal list-inside space-y-2 text-sm text-gray-600">
-              <li>Copy the embed code above</li>
-              <li>Open your website&apos;s HTML file</li>
-              <li>Paste the code before the closing &lt;/body&gt; tag</li>
-              <li>Save and publish your website</li>
-              <li>The widget will appear on all pages where the code is added</li>
-            </ol>
-          </Card>
-
-            </Card>
-          </div>
         </div>
       </div>
     </div>
+      </div>
     </>
   );
 }
