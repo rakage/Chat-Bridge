@@ -25,6 +25,7 @@ import {
   AlertCircle,
   X,
   Loader2,
+  Settings,
 } from "lucide-react";
 
 interface Document {
