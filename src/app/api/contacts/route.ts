@@ -39,12 +39,23 @@ export async function GET(request: NextRequest) {
       whereClause.platform = platform;
     }
 
-    // Search by customer name
+    // Search by customer name or email
     if (search) {
-      whereClause.customerName = {
-        contains: search,
-        mode: "insensitive",
-      };
+      whereClause.OR = [
+        ...(whereClause.OR || []),
+        {
+          customerName: {
+            contains: search,
+            mode: "insensitive",
+          },
+        },
+        {
+          customerEmail: {
+            contains: search,
+            mode: "insensitive",
+          },
+        },
+      ];
     }
 
     // Fetch conversations with customer data

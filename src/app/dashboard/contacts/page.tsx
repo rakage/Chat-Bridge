@@ -44,20 +44,38 @@ type Contact = {
 export default function ContactsPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
+  const [searchLoading, setSearchLoading] = useState(false);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [platformFilter, setPlatformFilter] = useState("ALL");
   const [total, setTotal] = useState(0);
 
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 300); // Wait 300ms after user stops typing
+
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  // Load contacts when debounced search or platform filter changes
   useEffect(() => {
     loadContacts();
-  }, [search, platformFilter]);
+  }, [debouncedSearch, platformFilter]);
 
   const loadContacts = async () => {
     try {
-      setLoading(true);
+      // Use searchLoading for subsequent searches to avoid full page reload
+      if (contacts.length > 0) {
+        setSearchLoading(true);
+      } else {
+        setLoading(true);
+      }
+      
       const params = new URLSearchParams();
-      if (search) params.set("search", search);
+      if (debouncedSearch) params.set("search", debouncedSearch);
       if (platformFilter !== "ALL") params.set("platform", platformFilter);
       params.set("limit", "50");
 
@@ -71,6 +89,7 @@ export default function ContactsPage() {
       console.error("Failed to load contacts:", error);
     } finally {
       setLoading(false);
+      setSearchLoading(false);
     }
   };
 
@@ -204,7 +223,24 @@ export default function ContactsPage() {
       </Card>
 
       {/* Contacts List */}
-      {contacts.length === 0 ? (
+      {searchLoading ? (
+        <Card>
+          <CardContent className="p-6">
+            <div className="space-y-2">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="flex items-center gap-4 p-4 border rounded-lg">
+                  <Skeleton className="h-12 w-12 rounded-full" />
+                  <div className="flex-1">
+                    <Skeleton className="h-5 w-48 mb-2" />
+                    <Skeleton className="h-4 w-32" />
+                  </div>
+                  <Skeleton className="h-8 w-24" />
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      ) : contacts.length === 0 ? (
         <Card>
           <CardContent className="p-12 text-center">
             <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
