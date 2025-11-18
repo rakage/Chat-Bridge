@@ -89,8 +89,7 @@ export default function TrainingPage() {
   const [llmConfigLoading, setLlmConfigLoading] = useState(true);
 
   // Load cached data immediately (before first render)
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [initialCacheLoaded] = useState(() => {
+  const [_initialCacheLoaded] = useState(() => {
     try {
       const cachedDocuments = localStorage.getItem("training-documents");
       const cachedSessions = localStorage.getItem("training-sessions");
