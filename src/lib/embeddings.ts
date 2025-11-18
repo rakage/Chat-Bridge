@@ -40,14 +40,16 @@ export class EmbeddingService {
    * @param text - The text to generate embedding for
    * @param apiKey - API key for the provider
    * @param provider - The embedding provider to use (OPENAI or GEMINI)
+   * @param model - Optional: Specific model to use for embeddings
    */
   static async generateEmbedding(
     text: string,
     apiKey?: string,
-    provider: EmbeddingProvider = "OPENAI"
+    provider: EmbeddingProvider = "OPENAI",
+    model?: string
   ): Promise<EmbeddingResult> {
     if (provider === "GEMINI") {
-      return this.generateGeminiEmbedding(text, apiKey);
+      return this.generateGeminiEmbedding(text, apiKey, model);
     }
     
     // Default to OpenAI
@@ -62,7 +64,7 @@ export class EmbeddingService {
 
       const openai = this.getOpenAIClient(apiKey);
       const response = await openai.embeddings.create({
-        model: this.OPENAI_MODEL,
+        model: model || this.OPENAI_MODEL,
         input: truncatedText,
         encoding_format: "float",
       });
@@ -89,10 +91,12 @@ export class EmbeddingService {
    * Generate embedding using Gemini
    * @param text - The text to generate embedding for
    * @param apiKey - Gemini API key
+   * @param modelName - Optional: Specific Gemini model to use
    */
   private static async generateGeminiEmbedding(
     text: string,
-    apiKey?: string
+    apiKey?: string,
+    modelName?: string
   ): Promise<EmbeddingResult> {
     const effectiveKey = apiKey || process.env.GEMINI_API_KEY;
     if (!effectiveKey) {
@@ -102,7 +106,7 @@ export class EmbeddingService {
     try {
       const truncatedText = this.truncateText(text);
       const genAI = this.getGeminiClient(effectiveKey);
-      const model = genAI.getGenerativeModel({ model: this.GEMINI_EMBEDDING_MODEL });
+      const model = genAI.getGenerativeModel({ model: modelName || this.GEMINI_EMBEDDING_MODEL });
 
       const result = await model.embedContent(truncatedText);
       
@@ -129,18 +133,20 @@ export class EmbeddingService {
    * @param texts - Array of texts to generate embeddings for
    * @param apiKey - API key for the provider
    * @param provider - The embedding provider to use (OPENAI or GEMINI)
+   * @param model - Optional: Specific model to use for embeddings
    */
   static async generateEmbeddings(
     texts: string[],
     apiKey?: string,
-    provider: EmbeddingProvider = "OPENAI"
+    provider: EmbeddingProvider = "OPENAI",
+    model?: string
   ): Promise<EmbeddingBatch> {
     if (texts.length === 0) {
       return { inputs: [], embeddings: [] };
     }
 
     if (provider === "GEMINI") {
-      return this.generateGeminiEmbeddings(texts, apiKey);
+      return this.generateGeminiEmbeddings(texts, apiKey, model);
     }
 
     // Default to OpenAI
@@ -162,7 +168,7 @@ export class EmbeddingService {
 
       for (const batch of batches) {
         const response = await openai.embeddings.create({
-          model: this.OPENAI_MODEL,
+          model: model || this.OPENAI_MODEL,
           input: batch,
           encoding_format: "float",
         });
@@ -200,10 +206,12 @@ export class EmbeddingService {
    * Generate embeddings for multiple texts using Gemini (processes sequentially)
    * @param texts - Array of texts to generate embeddings for
    * @param apiKey - Gemini API key
+   * @param modelName - Optional: Specific Gemini model to use
    */
   private static async generateGeminiEmbeddings(
     texts: string[],
-    apiKey?: string
+    apiKey?: string,
+    modelName?: string
   ): Promise<EmbeddingBatch> {
     const effectiveKey = apiKey || process.env.GEMINI_API_KEY;
     if (!effectiveKey) {
@@ -213,7 +221,7 @@ export class EmbeddingService {
     try {
       const truncatedTexts = texts.map(text => this.truncateText(text));
       const genAI = this.getGeminiClient(effectiveKey);
-      const model = genAI.getGenerativeModel({ model: this.GEMINI_EMBEDDING_MODEL });
+      const model = genAI.getGenerativeModel({ model: modelName || this.GEMINI_EMBEDDING_MODEL });
 
       const allEmbeddings: number[][] = [];
       const allTokenCounts: number[] = [];

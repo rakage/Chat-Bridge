@@ -32,7 +32,6 @@ import {
   CheckCircle,
   Brain,
   Settings,
-  Zap,
   Trash2,
   History,
   TrendingUp,
@@ -76,6 +75,7 @@ export default function LLMConfigPage() {
     provider: "OPENAI",
     apiKey: "",
     model: "gpt-3.5-turbo",
+    embeddingModel: "text-embedding-3-small",
     temperature: 0.3,
     maxTokens: 512,
     systemPrompt:
@@ -85,6 +85,7 @@ export default function LLMConfigPage() {
   const [currentConfig, setCurrentConfig] = useState<{
     provider: string;
     model: string;
+    embeddingModel?: string;
     temperature: number;
     maxTokens: number;
     systemPrompt: string;
@@ -128,6 +129,7 @@ export default function LLMConfigPage() {
           provider: parsedConfig.provider || "OPENAI",
           apiKey: "", // Never load the actual API key for security
           model: parsedConfig.model || "gpt-3.5-turbo",
+          embeddingModel: parsedConfig.embeddingModel || "text-embedding-3-small",
           temperature: parsedConfig.temperature || 0.3,
           maxTokens: parsedConfig.maxTokens || 512,
           systemPrompt: parsedConfig.systemPrompt || "",
@@ -161,6 +163,7 @@ export default function LLMConfigPage() {
             provider: data.config.provider || "OPENAI",
             apiKey: "", // Never load the actual API key for security
             model: data.config.model || "gpt-3.5-turbo",
+            embeddingModel: data.config.embeddingModel || "text-embedding-3-small",
             temperature: data.config.temperature || 0.3,
             maxTokens: data.config.maxTokens || 512,
             systemPrompt: data.config.systemPrompt || "",
@@ -251,53 +254,6 @@ export default function LLMConfigPage() {
     }
   };
 
-  const handleTestConnection = async () => {
-    if (!llmSettings.apiKey) {
-      setError("Please enter an API key before testing");
-      return;
-    }
-
-    setError("");
-    setSuccess("");
-
-    try {
-      // Test the connection by attempting to save the config first
-      const response = await fetch("/api/settings/provider", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(llmSettings),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        setError(errorData.error || "LLM connection test failed");
-        return;
-      }
-
-      const data = await response.json();
-      setSuccess(
-        "LLM connection successful! Configuration saved and validated."
-      );
-
-      // Update current config with the saved data
-      if (data.config) {
-        setCurrentConfig(data.config);
-
-        // Update cache
-        localStorage.setItem("llm-config", JSON.stringify(data.config));
-        localStorage.setItem("llm-config-timestamp", Date.now().toString());
-      }
-
-      // Clear the API key field after successful save
-      setLlmSettings((prev) => ({ ...prev, apiKey: "" }));
-    } catch (error) {
-      setError("Failed to test LLM connection");
-      console.error("LLM test error:", error);
-    }
-  };
-
   const handleDeleteConfig = async () => {
     setDeleting(true);
     setError("");
@@ -323,6 +279,7 @@ export default function LLMConfigPage() {
         provider: "OPENAI",
         apiKey: "",
         model: "gpt-3.5-turbo",
+        embeddingModel: "text-embedding-3-small",
         temperature: 0.3,
         maxTokens: 512,
         systemPrompt:
@@ -385,6 +342,32 @@ export default function LLMConfigPage() {
         return "gpt-3.5-turbo";
       case "GEMINI":
         return "gemini-1.5-flash";
+      default:
+        return "";
+    }
+  };
+
+  const getEmbeddingModelOptions = (provider: string) => {
+    switch (provider) {
+      case "OPENAI":
+        return [
+          "text-embedding-3-small",
+          "text-embedding-3-large",
+          "text-embedding-ada-002",
+        ];
+      case "GEMINI":
+        return ["text-embedding-004", "embedding-001"];
+      default:
+        return [];
+    }
+  };
+
+  const getDefaultEmbeddingModel = (provider: string) => {
+    switch (provider) {
+      case "OPENAI":
+        return "text-embedding-3-small";
+      case "GEMINI":
+        return "text-embedding-004";
       default:
         return "";
     }
@@ -561,6 +544,7 @@ export default function LLMConfigPage() {
                               ...prev,
                               provider,
                               model: getDefaultModel(provider),
+                              embeddingModel: getDefaultEmbeddingModel(provider),
                             }))
                           }
                           className="sr-only"
@@ -643,6 +627,37 @@ export default function LLMConfigPage() {
                     ))}
                   </SelectContent>
                 </Select>
+                <p className="text-xs text-muted-foreground">
+                  Model used for AI responses and chat interactions
+                </p>
+              </div>
+
+              {/* Embedding Model Selection */}
+              <div className="space-y-2">
+                <Label htmlFor="embedding-model">Embedding Model</Label>
+                <Select
+                  value={llmSettings.embeddingModel}
+                  onValueChange={(value) =>
+                    setLlmSettings((prev) => ({
+                      ...prev,
+                      embeddingModel: value,
+                    }))
+                  }
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select an embedding model" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {getEmbeddingModelOptions(llmSettings.provider).map((model) => (
+                      <SelectItem key={model} value={model}>
+                        {model}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Model used for document embeddings during knowledge base training
+                </p>
               </div>
 
               {/* Model Parameters */}
@@ -714,7 +729,7 @@ export default function LLMConfigPage() {
                 <Button
                   onClick={handleLLMSave}
                   disabled={llmLoading || !llmSettings.apiKey}
-                  className="flex-1"
+                  className="w-full"
                 >
                   {llmLoading ? (
                     <>
@@ -727,15 +742,6 @@ export default function LLMConfigPage() {
                       Save Configuration
                     </>
                   )}
-                </Button>
-
-                <Button
-                  variant="outline"
-                  onClick={handleTestConnection}
-                  disabled={!llmSettings.apiKey}
-                >
-                  <Zap className="h-4 w-4 mr-2" />
-                  Test Connection
                 </Button>
               </div>
             </CardContent>
@@ -766,6 +772,12 @@ export default function LLMConfigPage() {
                     <span className="text-sm text-gray-600">Model:</span>
                     <span className="text-sm font-medium">
                       {currentConfig.model}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">Embedding Model:</span>
+                    <span className="text-sm font-medium">
+                      {currentConfig.embeddingModel || "Not set"}
                     </span>
                   </div>
                   <div className="flex justify-between items-center">

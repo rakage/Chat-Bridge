@@ -91,17 +91,18 @@ model CompanyMember {
 }
 
 model ProviderConfig {
-  id           String   @id @default(cuid())
-  companyId    String   @unique
-  provider     Provider @default(OPENAI)
-  apiKeyEnc    String
-  model        String
-  temperature  Float    @default(0.3)
-  maxTokens    Int      @default(512)
-  systemPrompt String   @default("You are a helpful, brand-safe support assistant...")
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  company      Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  id             String   @id @default(cuid())
+  companyId      String   @unique
+  provider       Provider @default(OPENAI)
+  apiKeyEnc      String
+  model          String
+  embeddingModel String?  // Model used for embeddings during document training
+  temperature    Float    @default(0.3)
+  maxTokens      Int      @default(512)
+  systemPrompt   String   @default("You are a helpful, brand-safe support assistant...")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  company        Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
   @@map("provider_configs")
 }

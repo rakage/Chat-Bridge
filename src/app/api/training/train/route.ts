@@ -129,13 +129,14 @@ export async function POST(request: NextRequest) {
     const { decrypt } = await import("@/lib/encryption");
     const embeddingApiKey = await decrypt(providerConfig.apiKeyEnc);
     const embeddingProvider = providerConfig.provider as "OPENAI" | "GEMINI";
+    const embeddingModel = providerConfig.embeddingModel;
     
     console.log(
-      `🔑 Training: Using company's ${providerConfig.provider} API key for embeddings`
+      `🔑 Training: Using company's ${providerConfig.provider} API key for embeddings with model: ${embeddingModel || 'default'}`
     );
 
     // Start training process in background
-    processTrainingAsync(trainingSession.id, documents, settings, embeddingApiKey, embeddingProvider).catch(
+    processTrainingAsync(trainingSession.id, documents, settings, embeddingApiKey, embeddingProvider, embeddingModel).catch(
       (error) => {
         console.error("Error in training process:", error);
       }
@@ -165,7 +166,8 @@ async function processTrainingAsync(
   documents: any[],
   settings: any,
   embeddingApiKey?: string,
-  embeddingProvider: "OPENAI" | "GEMINI" = "OPENAI"
+  embeddingProvider: "OPENAI" | "GEMINI" = "OPENAI",
+  embeddingModel?: string | null
 ) {
   try {
     // Update status to processing
@@ -237,7 +239,8 @@ async function processTrainingAsync(
         const embeddingResult = await EmbeddingService.generateEmbeddings(
           texts,
           embeddingApiKey,
-          embeddingProvider
+          embeddingProvider,
+          embeddingModel || undefined
         );
 
         // Track token usage
@@ -347,7 +350,7 @@ async function processTrainingAsync(
             companyId,
             type: "TRAINING",
             provider: embeddingProvider,
-            model: embeddingProvider === "OPENAI" ? "text-embedding-3-small" : "text-embedding-004",
+            model: embeddingModel || (embeddingProvider === "OPENAI" ? "text-embedding-3-small" : "text-embedding-004"),
             inputTokens: totalTokensUsed,
             outputTokens: 0,
             totalTokens: totalTokensUsed,
