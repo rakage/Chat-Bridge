@@ -48,6 +48,7 @@ export async function GET(req: NextRequest) {
         autoOpenDelay: widgetConfig.autoOpenDelay,
         widgetName: widgetConfig.widgetName,
         requireEmail: widgetConfig.requireEmail,
+        allowedDomains: widgetConfig.allowedDomains || [],
       },
     }, { headers: corsHeaders });
   } catch (error) {

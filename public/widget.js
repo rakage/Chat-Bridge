@@ -403,6 +403,9 @@
         // Attach event listeners
         this.attachEventListeners();
         
+        // Setup SPA navigation detection
+        this.setupSPASupport();
+        
         // Auto-open if configured
         if (this.config.autoOpen) {
           setTimeout(() => this.open(), this.config.autoOpenDelay);
@@ -413,6 +416,38 @@
       } catch (error) {
         console.error('Widget initialization error:', error);
       }
+    }
+    
+    /**
+     * Setup SPA (Single Page Application) support
+     * Detects URL changes in modern web apps and re-checks domain whitelist
+     */
+    setupSPASupport() {
+      // Intercept history.pushState
+      const originalPushState = history.pushState;
+      history.pushState = (...args) => {
+        originalPushState.apply(history, args);
+        // Re-check domain whitelist on URL change
+        setTimeout(() => this.checkDomainWhitelist(), 100);
+      };
+      
+      // Intercept history.replaceState
+      const originalReplaceState = history.replaceState;
+      history.replaceState = (...args) => {
+        originalReplaceState.apply(history, args);
+        // Re-check domain whitelist on URL change
+        setTimeout(() => this.checkDomainWhitelist(), 100);
+      };
+      
+      // Listen to popstate (back/forward buttons)
+      window.addEventListener('popstate', () => {
+        setTimeout(() => this.checkDomainWhitelist(), 100);
+      });
+      
+      // Listen to hashchange (for hash-based routing)
+      window.addEventListener('hashchange', () => {
+        setTimeout(() => this.checkDomainWhitelist(), 100);
+      });
     }
 
     async loadSocketIO() {
@@ -506,7 +541,102 @@
         autoOpenDelay: serverConfig.autoOpenDelay || this.config.autoOpenDelay,
         widgetName: SecurityUtils.escapeHtml(serverConfig.widgetName) || this.config.widgetName,
         requireEmail: serverConfig.requireEmail ?? this.config.requireEmail,
+        allowedDomains: serverConfig.allowedDomains || [],
       };
+      
+      // Check domain whitelist after config is loaded
+      this.checkDomainWhitelist();
+    }
+    
+    /**
+     * Check if widget should be displayed based on domain whitelist
+     */
+    checkDomainWhitelist() {
+      const allowedDomains = this.config.allowedDomains || [];
+      
+      // If no domains configured, allow all
+      if (allowedDomains.length === 0) {
+        this.showWidget();
+        return;
+      }
+      
+      const currentOrigin = window.location.origin.toLowerCase();
+      const currentHostname = window.location.hostname.toLowerCase();
+      
+      // Check if current domain matches any allowed domain
+      const isAllowed = allowedDomains.some(domain => {
+        if (!domain) return false;
+        
+        const allowedDomain = domain.toLowerCase().trim();
+        
+        // Exact match with origin (https://example.com)
+        if (allowedDomain === currentOrigin) {
+          return true;
+        }
+        
+        // Match hostname without protocol (example.com)
+        if (allowedDomain === currentHostname) {
+          return true;
+        }
+        
+        // Match hostname if domain starts with http:// or https://
+        if (allowedDomain.startsWith('http://') || allowedDomain.startsWith('https://')) {
+          try {
+            const parsedDomain = new URL(allowedDomain);
+            if (parsedDomain.origin === currentOrigin) {
+              return true;
+            }
+          } catch (e) {
+            // Invalid URL, try other matching methods
+          }
+        }
+        
+        // Wildcard subdomain matching (*.example.com)
+        if (allowedDomain.startsWith('*.')) {
+          const baseDomain = allowedDomain.slice(2); // Remove *.
+          if (currentHostname.endsWith(baseDomain) || currentHostname === baseDomain) {
+            return true;
+          }
+        }
+        
+        // Localhost matching (for development)
+        if (allowedDomain === 'localhost' && 
+            (currentHostname === 'localhost' || currentHostname === '127.0.0.1')) {
+          return true;
+        }
+        
+        return false;
+      });
+      
+      if (isAllowed) {
+        this.showWidget();
+      } else {
+        this.hideWidget();
+        console.warn('[ChatWidget] Domain not allowed. Current domain:', currentOrigin);
+        console.warn('[ChatWidget] Allowed domains:', allowedDomains);
+      }
+    }
+    
+    /**
+     * Show widget (make visible)
+     */
+    showWidget() {
+      const container = document.querySelector('.chat-widget-container');
+      if (container) {
+        container.style.display = 'block';
+        container.style.visibility = 'visible';
+      }
+    }
+    
+    /**
+     * Hide widget (domain not allowed)
+     */
+    hideWidget() {
+      const container = document.querySelector('.chat-widget-container');
+      if (container) {
+        container.style.display = 'none';
+        container.style.visibility = 'hidden';
+      }
     }
 
     injectStyles() {

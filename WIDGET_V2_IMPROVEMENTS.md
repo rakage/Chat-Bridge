@@ -45,6 +45,38 @@ The widget now automatically detects the API URL from where it's loaded. You no 
 
 ---
 
+## New Feature: Domain Whitelist 🎯
+
+**Control where your widget appears!**
+
+### What It Does:
+Restrict widget display to specific domains. Perfect for:
+- ✅ Multi-domain setups
+- ✅ Preventing unauthorized usage
+- ✅ Development vs Production environments
+- ✅ Subdomain wildcards (*.example.com)
+
+### How to Use:
+1. Go to **Dashboard → Chat Widget → Allowed Domains**
+2. Click **"Add Domain"**
+3. Enter domains (examples):
+   - `https://example.com` - Exact match
+   - `example.com` - Protocol-independent
+   - `*.example.com` - All subdomains
+   - `localhost` - Local development
+4. Save configuration
+
+### Features:
+- ✅ **SPA Support** - Works with React, Vue, Angular navigation
+- ✅ **Wildcard Matching** - `*.example.com` matches all subdomains
+- ✅ **Localhost Support** - Easy local development
+- ✅ **Multiple Domains** - Add as many as needed
+- ✅ **No Restrictions** - Leave empty to allow all domains
+
+**See `DOMAIN_WHITELIST_FEATURE.md` for complete guide.**
+
+---
+
 ## Performance Improvements (81% Faster Load)
 
 ### 1. **Lazy Loading Socket.io** (-150KB initial load)

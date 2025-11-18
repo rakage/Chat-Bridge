@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Plus, X } from 'lucide-react';
 
 export default function ChatWidgetPage() {
   const { toast } = useToast();
@@ -90,6 +90,26 @@ export default function ChatWidgetPage() {
 
   const updateConfig = (key: string, value: any) => {
     setConfig({ ...config, [key]: value });
+  };
+
+  const addAllowedDomain = () => {
+    const currentDomains = config?.allowedDomains || [];
+    setConfig({ 
+      ...config, 
+      allowedDomains: [...currentDomains, ''] 
+    });
+  };
+
+  const updateAllowedDomain = (index: number, value: string) => {
+    const currentDomains = [...(config?.allowedDomains || [])];
+    currentDomains[index] = value;
+    setConfig({ ...config, allowedDomains: currentDomains });
+  };
+
+  const removeAllowedDomain = (index: number) => {
+    const currentDomains = [...(config?.allowedDomains || [])];
+    currentDomains.splice(index, 1);
+    setConfig({ ...config, allowedDomains: currentDomains });
   };
 
   const getEmbedCode = () => {
@@ -392,6 +412,62 @@ export default function ChatWidgetPage() {
                   />
                 </div>
               )}
+            </div>
+          </Card>
+
+          <Card className="p-6">
+            <h2 className="text-lg font-semibold mb-4">Allowed Domains</h2>
+            <p className="text-sm text-gray-600 mb-4">
+              Restrict where the widget can be displayed. Leave empty to allow all domains.
+            </p>
+            
+            <div className="space-y-3">
+              {(config?.allowedDomains || []).length === 0 && (
+                <div className="text-sm text-gray-500 italic bg-gray-50 p-3 rounded-md">
+                  No restrictions - widget will work on any domain
+                </div>
+              )}
+              
+              {(config?.allowedDomains || []).map((domain: string, index: number) => (
+                <div key={index} className="flex gap-2">
+                  <Input
+                    value={domain}
+                    onChange={(e) => updateAllowedDomain(index, e.target.value)}
+                    placeholder="https://example.com or example.com"
+                    className="flex-1"
+                  />
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => removeAllowedDomain(index)}
+                    className="shrink-0"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+              
+              <Button
+                variant="outline"
+                onClick={addAllowedDomain}
+                className="w-full"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Domain
+              </Button>
+              
+              <div className="bg-blue-50 border border-blue-200 rounded-md p-3 mt-4">
+                <h4 className="text-sm font-semibold text-blue-900 mb-1">Examples:</h4>
+                <ul className="text-xs text-blue-700 space-y-1">
+                  <li>• <code className="bg-blue-100 px-1 rounded">https://example.com</code> - Only this exact domain</li>
+                  <li>• <code className="bg-blue-100 px-1 rounded">example.com</code> - Works with http and https</li>
+                  <li>• <code className="bg-blue-100 px-1 rounded">*.example.com</code> - All subdomains</li>
+                  <li>• <code className="bg-blue-100 px-1 rounded">localhost</code> - For local development</li>
+                </ul>
+                <p className="text-xs text-blue-600 mt-2">
+                  💡 Tip: If widget doesn&apos;t appear, check browser console for domain mismatch errors
+                </p>
+              </div>
             </div>
           </Card>
 
