@@ -17,7 +17,11 @@ import {
   MapPin,
   Calendar,
   Filter,
-  ArrowUpDown
+  ArrowUpDown,
+  Facebook,
+  Instagram,
+  Send,
+  Globe
 } from "lucide-react";
 
 type Contact = {
@@ -70,18 +74,33 @@ export default function ContactsPage() {
     }
   };
 
-  const getPlatformBadgeColor = (platform: string) => {
+  const getPlatformIcon = (platform: string) => {
     switch (platform) {
       case "FACEBOOK":
-        return "bg-blue-100 text-blue-700";
+        return <Facebook className="h-4 w-4 text-blue-600" />;
       case "INSTAGRAM":
-        return "bg-pink-100 text-pink-700";
+        return <Instagram className="h-4 w-4 text-pink-600" />;
       case "TELEGRAM":
-        return "bg-sky-100 text-sky-700";
+        return <Send className="h-4 w-4 text-sky-600" />;
       case "WIDGET":
-        return "bg-purple-100 text-purple-700";
+        return <Globe className="h-4 w-4 text-purple-600" />;
       default:
-        return "bg-gray-100 text-gray-700";
+        return <MessageSquare className="h-4 w-4 text-gray-600" />;
+    }
+  };
+
+  const getPlatformTooltip = (platform: string) => {
+    switch (platform) {
+      case "FACEBOOK":
+        return "Facebook Messenger";
+      case "INSTAGRAM":
+        return "Instagram DM";
+      case "TELEGRAM":
+        return "Telegram";
+      case "WIDGET":
+        return "Website Chat";
+      default:
+        return "Unknown";
     }
   };
 
@@ -223,23 +242,19 @@ export default function ContactsPage() {
 
                   {/* Contact Info */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
+                    <div className="flex items-center gap-2 mb-2">
                       <h3 className="font-semibold text-gray-900 truncate">
                         {contact.customerName}
                       </h3>
-                      <Badge className={`${getPlatformBadgeColor(contact.platform)} text-xs`}>
-                        {contact.platform === "WIDGET" ? "Website" : contact.platform}
-                      </Badge>
+                      <div className="flex items-center" title={getPlatformTooltip(contact.platform)}>
+                        {getPlatformIcon(contact.platform)}
+                      </div>
                       {contact.unreadCount > 0 && (
                         <Badge className="bg-red-500 text-white text-xs">
                           {contact.unreadCount} new
                         </Badge>
                       )}
                     </div>
-
-                    <p className="text-sm text-gray-500 truncate mb-1">
-                      {contact.platformName}
-                    </p>
 
                     {/* Contact Details */}
                     <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
