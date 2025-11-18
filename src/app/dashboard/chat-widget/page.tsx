@@ -98,7 +98,6 @@ export default function ChatWidgetPage() {
 <script src="${baseUrl}/widget.js"></script>
 <script>
   window.chatWidgetConfig = {
-    apiUrl: '${baseUrl}',
     companyId: '${companyId}'
   };
   new ChatWidget(window.chatWidgetConfig);
