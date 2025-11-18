@@ -541,11 +541,11 @@ export default function TrainingPage() {
                 </h3>
                 <p className="text-sm text-yellow-800 mb-4">
                   Before you can train documents, you need to set up your AI language model provider in the LLM Config page.
-                  The system will use your configured provider's embeddings for training:
+                  The system will use your configured provider&apos;s embeddings for training:
                 </p>
                 <ul className="text-sm text-yellow-800 mb-4 list-disc list-inside space-y-1">
-                  <li>If using <strong>OpenAI</strong>, embeddings will be generated using OpenAI's embedding model</li>
-                  <li>If using <strong>Google Gemini</strong>, embeddings will be generated using Google's embedding model</li>
+                  <li>If using <strong>OpenAI</strong>, embeddings will be generated using OpenAI&apos;s embedding model</li>
+                  <li>If using <strong>Google Gemini</strong>, embeddings will be generated using Google&apos;s embedding model</li>
                 </ul>
                 <Button
                   onClick={() => router.push("/dashboard/llm-config")}
