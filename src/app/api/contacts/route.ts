@@ -26,6 +26,7 @@ export async function GET(request: NextRequest) {
 
     // Build where clause for conversations
     let whereClause: any = {
+      // Company filter - user must have access to this company's conversations
       OR: [
         { pageConnection: { companyId: session.user.companyId } },
         { instagramConnection: { companyId: session.user.companyId } },
@@ -39,21 +40,24 @@ export async function GET(request: NextRequest) {
       whereClause.platform = platform;
     }
 
-    // Search by customer name or email
+    // Search by customer name or email (use AND logic with company filter)
     if (search) {
-      whereClause.OR = [
-        ...(whereClause.OR || []),
+      whereClause.AND = [
         {
-          customerName: {
-            contains: search,
-            mode: "insensitive",
-          },
-        },
-        {
-          customerEmail: {
-            contains: search,
-            mode: "insensitive",
-          },
+          OR: [
+            {
+              customerName: {
+                contains: search,
+                mode: "insensitive",
+              },
+            },
+            {
+              customerEmail: {
+                contains: search,
+                mode: "insensitive",
+              },
+            },
+          ],
         },
       ];
     }
