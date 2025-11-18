@@ -58,6 +58,7 @@ export async function GET(request: NextRequest) {
         messagingEnabled: true,
         profilePictureUrl: true,
         accountType: true,
+        autoBot: true, // Include autoBot status
         createdAt: true,
         updatedAt: true,
         accessTokenEnc: true, // Need this to fetch fresh profile
@@ -123,6 +124,7 @@ export async function GET(request: NextRequest) {
         messagingEnabled: conn.messagingEnabled,
         profilePictureUrl: freshProfilePictureUrl, // Use fresh URL
         accountType: conn.accountType,
+        autoBot: conn.autoBot, // Include autoBot status
         createdAt: conn.createdAt,
         updatedAt: conn.updatedAt,
         webhookConnected: conn.messagingEnabled

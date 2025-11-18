@@ -9,8 +9,9 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Plus, X } from 'lucide-react';
+import { ArrowLeft, Plus, X, FileText, Palette, Code2 } from 'lucide-react';
 
 export default function ChatWidgetPage() {
   const { toast } = useToast();
@@ -246,305 +247,349 @@ export default function ChatWidgetPage() {
           </div>
         </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="space-y-6">
-          <Card className="p-6">
-            <h2 className="text-lg font-semibold mb-4">General Settings</h2>
-            
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="widgetName">Widget Name</Label>
-                <Input
-                  id="widgetName"
-                  value={config?.widgetName || ''}
-                  onChange={(e) => updateConfig('widgetName', e.target.value)}
-                  placeholder="Chat Widget"
-                />
-              </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Column - Settings (2/3 width) */}
+        <div className="lg:col-span-2 space-y-6">
+          <Tabs defaultValue="content" className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="content" className="flex items-center gap-2">
+                <FileText className="h-4 w-4" />
+                Content
+              </TabsTrigger>
+              <TabsTrigger value="style" className="flex items-center gap-2">
+                <Palette className="h-4 w-4" />
+                Style
+              </TabsTrigger>
+              <TabsTrigger value="embed" className="flex items-center gap-2">
+                <Code2 className="h-4 w-4" />
+                Embed
+              </TabsTrigger>
+            </TabsList>
 
-              <div>
-                <Label htmlFor="welcomeMessage">Welcome Message</Label>
-                <Textarea
-                  id="welcomeMessage"
-                  value={config?.welcomeMessage || ''}
-                  onChange={(e) => updateConfig('welcomeMessage', e.target.value)}
-                  placeholder="Hi! How can we help you?"
-                  rows={3}
-                />
-              </div>
+            {/* CONTENT TAB */}
+            <TabsContent value="content" className="space-y-6 mt-6">
+              {/* Widget Name, Welcome Message, Placeholder */}
+              <Card className="p-6">
+                <h3 className="text-lg font-semibold mb-4">Widget Text</h3>
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="widgetName">Widget Name</Label>
+                    <Input
+                      id="widgetName"
+                      value={config?.widgetName || ''}
+                      onChange={(e) => updateConfig('widgetName', e.target.value)}
+                      placeholder="Chat Widget"
+                    />
+                  </div>
 
-              <div>
-                <Label htmlFor="placeholderText">Placeholder Text</Label>
-                <Input
-                  id="placeholderText"
-                  value={config?.placeholderText || ''}
-                  onChange={(e) => updateConfig('placeholderText', e.target.value)}
-                  placeholder="Type your message..."
-                />
-              </div>
+                  <div>
+                    <Label htmlFor="welcomeMessage">Welcome Message</Label>
+                    <Textarea
+                      id="welcomeMessage"
+                      value={config?.welcomeMessage || ''}
+                      onChange={(e) => updateConfig('welcomeMessage', e.target.value)}
+                      placeholder="Hi! How can we help you?"
+                      rows={3}
+                    />
+                  </div>
 
-              <div className="flex items-center justify-between">
-                <Label htmlFor="enabled">Widget Enabled</Label>
-                <Switch
-                  id="enabled"
-                  checked={config?.enabled || false}
-                  onCheckedChange={(checked) => updateConfig('enabled', checked)}
-                />
-              </div>
+                  <div>
+                    <Label htmlFor="placeholderText">Placeholder Text</Label>
+                    <Input
+                      id="placeholderText"
+                      value={config?.placeholderText || ''}
+                      onChange={(e) => updateConfig('placeholderText', e.target.value)}
+                      placeholder="Type your message..."
+                    />
+                  </div>
+                </div>
+              </Card>
 
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label htmlFor="autoBot" className={!hasLLMConfig ? 'text-gray-400' : ''}>
-                    AI Auto-Response
-                  </Label>
-                  {!hasLLMConfig ? (
-                    <p className="text-sm text-orange-600">
-                      ⚠️ Configure LLM settings first in{' '}
-                      <Link href="/dashboard/llm-config" className="underline font-medium">
-                        Bot Settings
-                      </Link>
-                    </p>
-                  ) : (
-                    <p className="text-sm text-gray-500">Bot responds automatically to widget messages</p>
+              {/* Data Collection */}
+              <Card className="p-6">
+                <h3 className="text-lg font-semibold mb-4">Data Collection</h3>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="collectName">Collect Name</Label>
+                    <Switch
+                      id="collectName"
+                      checked={config?.collectName || false}
+                      onCheckedChange={(checked) => updateConfig('collectName', checked)}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="collectEmail">Collect Email</Label>
+                    <Switch
+                      id="collectEmail"
+                      checked={config?.collectEmail || false}
+                      onCheckedChange={(checked) => updateConfig('collectEmail', checked)}
+                    />
+                  </div>
+
+                  {config?.collectEmail && (
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="requireEmail">Require Email</Label>
+                      <Switch
+                        id="requireEmail"
+                        checked={config?.requireEmail || false}
+                        onCheckedChange={(checked) => updateConfig('requireEmail', checked)}
+                      />
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="collectPhone">Collect Phone</Label>
+                    <Switch
+                      id="collectPhone"
+                      checked={config?.collectPhone || false}
+                      onCheckedChange={(checked) => updateConfig('collectPhone', checked)}
+                    />
+                  </div>
+                </div>
+              </Card>
+            </TabsContent>
+
+            {/* STYLE TAB */}
+            <TabsContent value="style" className="space-y-6 mt-6">
+              {/* Appearance */}
+              <Card className="p-6">
+                <h3 className="text-lg font-semibold mb-4">Appearance</h3>
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="primaryColor">Primary Color</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        id="primaryColor"
+                        type="color"
+                        value={config?.primaryColor || '#2563eb'}
+                        onChange={(e) => updateConfig('primaryColor', e.target.value)}
+                        className="w-20 h-10"
+                      />
+                      <Input
+                        value={config?.primaryColor || '#2563eb'}
+                        onChange={(e) => updateConfig('primaryColor', e.target.value)}
+                        placeholder="#2563eb"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="accentColor">Accent Color</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        id="accentColor"
+                        type="color"
+                        value={config?.accentColor || '#1e40af'}
+                        onChange={(e) => updateConfig('accentColor', e.target.value)}
+                        className="w-20 h-10"
+                      />
+                      <Input
+                        value={config?.accentColor || '#1e40af'}
+                        onChange={(e) => updateConfig('accentColor', e.target.value)}
+                        placeholder="#1e40af"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="position">Widget Position</Label>
+                    <select
+                      id="position"
+                      value={config?.position || 'bottom-right'}
+                      onChange={(e) => updateConfig('position', e.target.value)}
+                      className="w-full p-2 border rounded-md"
+                    >
+                      <option value="bottom-right">Bottom Right</option>
+                      <option value="bottom-left">Bottom Left</option>
+                      <option value="top-right">Top Right</option>
+                      <option value="top-left">Top Left</option>
+                    </select>
+                  </div>
+                </div>
+              </Card>
+
+              {/* Behaviour */}
+              <Card className="p-6">
+                <h3 className="text-lg font-semibold mb-4">Behaviour</h3>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="enabled">Widget Enabled</Label>
+                    <Switch
+                      id="enabled"
+                      checked={config?.enabled || false}
+                      onCheckedChange={(checked) => updateConfig('enabled', checked)}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label htmlFor="autoBot" className={!hasLLMConfig ? 'text-gray-400' : ''}>
+                        AI Auto-Response
+                      </Label>
+                      {!hasLLMConfig ? (
+                        <p className="text-sm text-orange-600">
+                          ⚠️ Configure LLM settings first in{' '}
+                          <Link href="/dashboard/llm-config" className="underline font-medium">
+                            Bot Settings
+                          </Link>
+                        </p>
+                      ) : (
+                        <p className="text-sm text-gray-500">Bot responds automatically to widget messages</p>
+                      )}
+                    </div>
+                    <Switch
+                      id="autoBot"
+                      checked={config?.autoBot || false}
+                      onCheckedChange={(checked) => {
+                        if (!hasLLMConfig && checked) {
+                          toast({
+                            title: 'LLM Configuration Required',
+                            description: 'Please configure your LLM provider in Bot Settings before enabling auto-response.',
+                            variant: 'destructive',
+                          });
+                          return;
+                        }
+                        updateConfig('autoBot', checked);
+                      }}
+                      disabled={!hasLLMConfig}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label htmlFor="autoOpen">Auto Open</Label>
+                      <p className="text-sm text-gray-500">Open widget automatically</p>
+                    </div>
+                    <Switch
+                      id="autoOpen"
+                      checked={config?.autoOpen || false}
+                      onCheckedChange={(checked) => updateConfig('autoOpen', checked)}
+                    />
+                  </div>
+
+                  {config?.autoOpen && (
+                    <div>
+                      <Label htmlFor="autoOpenDelay">Auto Open Delay (ms)</Label>
+                      <Input
+                        id="autoOpenDelay"
+                        type="number"
+                        value={config?.autoOpenDelay || 3000}
+                        onChange={(e) => updateConfig('autoOpenDelay', parseInt(e.target.value))}
+                      />
+                    </div>
                   )}
                 </div>
-                <Switch
-                  id="autoBot"
-                  checked={config?.autoBot || false}
-                  onCheckedChange={(checked) => {
-                    if (!hasLLMConfig && checked) {
-                      toast({
-                        title: 'LLM Configuration Required',
-                        description: 'Please configure your LLM provider in Bot Settings before enabling auto-response.',
-                        variant: 'destructive',
-                      });
-                      return;
-                    }
-                    updateConfig('autoBot', checked);
-                  }}
-                  disabled={!hasLLMConfig}
-                />
-              </div>
-            </div>
-          </Card>
+              </Card>
+            </TabsContent>
 
-          <Card className="p-6">
-            <h2 className="text-lg font-semibold mb-4">Appearance</h2>
-            
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="primaryColor">Primary Color</Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="primaryColor"
-                    type="color"
-                    value={config?.primaryColor || '#2563eb'}
-                    onChange={(e) => updateConfig('primaryColor', e.target.value)}
-                    className="w-20 h-10"
-                  />
-                  <Input
-                    value={config?.primaryColor || '#2563eb'}
-                    onChange={(e) => updateConfig('primaryColor', e.target.value)}
-                    placeholder="#2563eb"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <Label htmlFor="accentColor">Accent Color</Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="accentColor"
-                    type="color"
-                    value={config?.accentColor || '#1e40af'}
-                    onChange={(e) => updateConfig('accentColor', e.target.value)}
-                    className="w-20 h-10"
-                  />
-                  <Input
-                    value={config?.accentColor || '#1e40af'}
-                    onChange={(e) => updateConfig('accentColor', e.target.value)}
-                    placeholder="#1e40af"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <Label htmlFor="position">Position</Label>
-                <select
-                  id="position"
-                  value={config?.position || 'bottom-right'}
-                  onChange={(e) => updateConfig('position', e.target.value)}
-                  className="w-full p-2 border rounded-md"
-                >
-                  <option value="bottom-right">Bottom Right</option>
-                  <option value="bottom-left">Bottom Left</option>
-                  <option value="top-right">Top Right</option>
-                  <option value="top-left">Top Left</option>
-                </select>
-              </div>
-            </div>
-          </Card>
-
-          <Card className="p-6">
-            <h2 className="text-lg font-semibold mb-4">Behavior</h2>
-            
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label htmlFor="autoOpen">Auto Open</Label>
-                  <p className="text-sm text-gray-500">Open widget automatically</p>
-                </div>
-                <Switch
-                  id="autoOpen"
-                  checked={config?.autoOpen || false}
-                  onCheckedChange={(checked) => updateConfig('autoOpen', checked)}
-                />
-              </div>
-
-              {config?.autoOpen && (
-                <div>
-                  <Label htmlFor="autoOpenDelay">Auto Open Delay (ms)</Label>
-                  <Input
-                    id="autoOpenDelay"
-                    type="number"
-                    value={config?.autoOpenDelay || 3000}
-                    onChange={(e) => updateConfig('autoOpenDelay', parseInt(e.target.value))}
-                  />
-                </div>
-              )}
-            </div>
-          </Card>
-
-          <Card className="p-6">
-            <h2 className="text-lg font-semibold mb-4">Allowed Domains</h2>
-            <p className="text-sm text-gray-600 mb-4">
-              Restrict where the widget can be displayed. Leave empty to allow all domains.
-            </p>
-            
-            <div className="space-y-3">
-              {(config?.allowedDomains || []).length === 0 && (
-                <div className="text-sm text-gray-500 italic bg-gray-50 p-3 rounded-md">
-                  No restrictions - widget will work on any domain
-                </div>
-              )}
-              
-              {(config?.allowedDomains || []).map((domain: string, index: number) => (
-                <div key={index} className="flex gap-2">
-                  <Input
-                    value={domain}
-                    onChange={(e) => updateAllowedDomain(index, e.target.value)}
-                    placeholder="https://example.com or example.com"
-                    className="flex-1"
-                  />
+            {/* EMBED TAB */}
+            <TabsContent value="embed" className="space-y-6 mt-6">
+              {/* Allowed Domains */}
+              <Card className="p-6">
+                <h3 className="text-lg font-semibold mb-4">Allowed Domains</h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  Restrict where the widget can be displayed. Leave empty to allow all domains.
+                </p>
+                
+                <div className="space-y-3">
+                  {(config?.allowedDomains || []).length === 0 && (
+                    <div className="text-sm text-gray-500 italic bg-gray-50 p-3 rounded-md">
+                      No restrictions - widget will work on any domain
+                    </div>
+                  )}
+                  
+                  {(config?.allowedDomains || []).map((domain: string, index: number) => (
+                    <div key={index} className="flex gap-2">
+                      <Input
+                        value={domain}
+                        onChange={(e) => updateAllowedDomain(index, e.target.value)}
+                        placeholder="https://example.com or example.com"
+                        className="flex-1"
+                      />
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => removeAllowedDomain(index)}
+                        className="shrink-0"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                  
                   <Button
                     variant="outline"
-                    size="icon"
-                    onClick={() => removeAllowedDomain(index)}
-                    className="shrink-0"
+                    onClick={addAllowedDomain}
+                    className="w-full"
                   >
-                    <X className="h-4 w-4" />
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Domain
                   </Button>
+                  
+                  <div className="bg-blue-50 border border-blue-200 rounded-md p-3 mt-4">
+                    <h4 className="text-sm font-semibold text-blue-900 mb-1">Examples:</h4>
+                    <ul className="text-xs text-blue-700 space-y-1">
+                      <li>• <code className="bg-blue-100 px-1 rounded">https://example.com</code> - Only this exact domain</li>
+                      <li>• <code className="bg-blue-100 px-1 rounded">example.com</code> - Works with http and https</li>
+                      <li>• <code className="bg-blue-100 px-1 rounded">*.example.com</code> - All subdomains</li>
+                      <li>• <code className="bg-blue-100 px-1 rounded">localhost</code> - For local development</li>
+                    </ul>
+                    <p className="text-xs text-blue-600 mt-2">
+                      💡 Tip: If widget doesn&apos;t appear, check browser console for domain mismatch errors
+                    </p>
+                  </div>
                 </div>
-              ))}
-              
-              <Button
-                variant="outline"
-                onClick={addAllowedDomain}
-                className="w-full"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Add Domain
-              </Button>
-              
-              <div className="bg-blue-50 border border-blue-200 rounded-md p-3 mt-4">
-                <h4 className="text-sm font-semibold text-blue-900 mb-1">Examples:</h4>
-                <ul className="text-xs text-blue-700 space-y-1">
-                  <li>• <code className="bg-blue-100 px-1 rounded">https://example.com</code> - Only this exact domain</li>
-                  <li>• <code className="bg-blue-100 px-1 rounded">example.com</code> - Works with http and https</li>
-                  <li>• <code className="bg-blue-100 px-1 rounded">*.example.com</code> - All subdomains</li>
-                  <li>• <code className="bg-blue-100 px-1 rounded">localhost</code> - For local development</li>
-                </ul>
-                <p className="text-xs text-blue-600 mt-2">
-                  💡 Tip: If widget doesn&apos;t appear, check browser console for domain mismatch errors
+              </Card>
+
+              {/* Widget Setup Code */}
+              <Card className="p-6">
+                <h3 className="text-lg font-semibold mb-4">Widget Setup Code</h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  Copy this code and paste it before the closing &lt;/body&gt; tag on your website
                 </p>
-              </div>
-            </div>
-          </Card>
-
-          <Card className="p-6">
-            <h2 className="text-lg font-semibold mb-4">Data Collection</h2>
-            
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="collectName">Collect Name</Label>
-                <Switch
-                  id="collectName"
-                  checked={config?.collectName || false}
-                  onCheckedChange={(checked) => updateConfig('collectName', checked)}
-                />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <Label htmlFor="collectEmail">Collect Email</Label>
-                <Switch
-                  id="collectEmail"
-                  checked={config?.collectEmail || false}
-                  onCheckedChange={(checked) => updateConfig('collectEmail', checked)}
-                />
-              </div>
-
-              {config?.collectEmail && (
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="requireEmail">Require Email</Label>
-                  <Switch
-                    id="requireEmail"
-                    checked={config?.requireEmail || false}
-                    onCheckedChange={(checked) => updateConfig('requireEmail', checked)}
-                  />
+                
+                <div className="bg-gray-900 text-gray-100 p-4 rounded-lg mb-4 overflow-x-auto">
+                  <pre className="text-sm">
+                    <code>{getEmbedCode()}</code>
+                  </pre>
                 </div>
-              )}
 
-              <div className="flex items-center justify-between">
-                <Label htmlFor="collectPhone">Collect Phone</Label>
-                <Switch
-                  id="collectPhone"
-                  checked={config?.collectPhone || false}
-                  onCheckedChange={(checked) => updateConfig('collectPhone', checked)}
-                />
-              </div>
-            </div>
-          </Card>
+                <Button onClick={copyEmbedCode} variant="outline" className="w-full">
+                  Copy Embed Code
+                </Button>
+              </Card>
 
-          <Button onClick={saveConfig} disabled={saving} className="w-full">
+              {/* Installation Instructions */}
+              <Card className="p-6">
+                <h3 className="text-lg font-semibold mb-4">Installation Instructions</h3>
+                <ol className="list-decimal list-inside space-y-2 text-sm text-gray-600">
+                  <li>Copy the embed code above</li>
+                  <li>Open your website&apos;s HTML file</li>
+                  <li>Paste the code before the closing &lt;/body&gt; tag</li>
+                  <li>Save and publish your website</li>
+                  <li>The widget will appear on all pages where the code is added</li>
+                </ol>
+              </Card>
+            </TabsContent>
+          </Tabs>
+
+          {/* Save Button - Always visible */}
+          <Button onClick={saveConfig} disabled={saving} className="w-full" size="lg">
             {saving ? 'Saving...' : 'Save Configuration'}
           </Button>
         </div>
 
-        <div className="space-y-6">
-          <Card className="p-6">
-            <h2 className="text-lg font-semibold mb-4">Embed Code</h2>
-            <p className="text-sm text-gray-600 mb-4">
-              Copy this code and paste it before the closing &lt;/body&gt; tag on your website
-            </p>
+        {/* Right Column - Preview (1/3 width, sticky) */}
+        <div className="lg:col-span-1">
+          <div className="sticky top-6">
+            <Card className="p-6">
+              <h2 className="text-lg font-semibold mb-4">Preview</h2>
+              <p className="text-sm text-gray-500 mb-4">
+                This is how your widget will appear on your website
+              </p>
             
-            <div className="bg-gray-900 text-gray-100 p-4 rounded-lg mb-4 overflow-x-auto">
-              <pre className="text-sm">
-                <code>{getEmbedCode()}</code>
-              </pre>
-            </div>
-
-            <Button onClick={copyEmbedCode} variant="outline" className="w-full">
-              Copy Embed Code
-            </Button>
-          </Card>
-
-          <Card className="p-6">
-            <h2 className="text-lg font-semibold mb-4">Preview</h2>
-            <p className="text-sm text-gray-600 mb-4">
-              This is how your widget will appear on your website
-            </p>
-            
-            <div className="bg-gradient-to-br from-gray-100 to-gray-200 p-8 rounded-lg relative" style={{ height: '500px' }}>
+            <div className="bg-gradient-to-br from-gray-100 to-gray-200 p-6 rounded-lg relative" style={{ height: '450px' }}>
               {/* Preview background pattern */}
               <div className="absolute inset-0 opacity-10">
                 <div className="grid grid-cols-8 gap-4 h-full">
@@ -781,13 +826,8 @@ export default function ChatWidgetPage() {
             </ol>
           </Card>
 
-          <Card className="p-6 bg-blue-50 border-blue-200">
-            <h3 className="font-semibold mb-2 text-blue-900">Need Help?</h3>
-            <p className="text-sm text-blue-700">
-              If you need assistance installing the widget or have questions about configuration, 
-              please contact our support team.
-            </p>
-          </Card>
+            </Card>
+          </div>
         </div>
       </div>
     </div>
