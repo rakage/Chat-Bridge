@@ -65,6 +65,12 @@ const navigationGroups = [
         roles: ["OWNER", "ADMIN", "AGENT"],
       },
       {
+        name: "Contacts",
+        href: "/dashboard/contacts",
+        icon: Users,
+        roles: ["OWNER", "ADMIN", "AGENT"],
+      },
+      {
         name: "Canned Responses",
         href: "/dashboard/canned-responses",
         icon: Zap,
