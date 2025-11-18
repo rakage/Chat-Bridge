@@ -88,8 +88,9 @@ export default function TrainingPage() {
   } | null>(null);
   const [llmConfigLoading, setLlmConfigLoading] = useState(true);
 
-  // Load cached data on component mount
-  useEffect(() => {
+  // Load cached data immediately (before first render)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [initialCacheLoaded] = useState(() => {
     try {
       const cachedDocuments = localStorage.getItem("training-documents");
       const cachedSessions = localStorage.getItem("training-sessions");
@@ -103,16 +104,19 @@ export default function TrainingPage() {
         const parsedDocuments = JSON.parse(cachedDocuments);
         setDocuments(parsedDocuments);
         setDataLoaded(true);
-      }
-
-      if (cachedSessions && isCacheValid) {
-        const parsedSessions = JSON.parse(cachedSessions);
-        setTrainingSessions(parsedSessions);
+        
+        if (cachedSessions) {
+          const parsedSessions = JSON.parse(cachedSessions);
+          setTrainingSessions(parsedSessions);
+        }
+        
+        return true;
       }
     } catch (error) {
       console.error("Error loading cached data:", error);
     }
-  }, []);
+    return false;
+  });
 
   // No user-configurable training settings needed - handled in backend
 
@@ -149,7 +153,6 @@ export default function TrainingPage() {
     async (force = false) => {
       // Don't reload if data is already loaded unless forced
       if (dataLoaded && !force) {
-        setLoading(false);
         return;
       }
 
@@ -225,20 +228,6 @@ export default function TrainingPage() {
       clearTimeout(checkTimeout);
     };
   }, [documents, dataLoaded, loadData]);
-
-  // Handle page visibility changes to prevent unnecessary reloads
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      // Don't do anything special when tab becomes visible/hidden
-      // This prevents the page from reloading when switching tabs
-    };
-
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-
-    return () => {
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-    };
-  }, []);
 
   // Auto-dismiss success/error messages
   useEffect(() => {
@@ -554,27 +543,6 @@ export default function TrainingPage() {
                   <Settings className="h-4 w-4 mr-2" />
                   Go to LLM Config
                 </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Provider Info */}
-      {!llmConfigLoading && llmConfig?.hasApiKey && (
-        <Card className="border-blue-200 bg-blue-50">
-          <CardContent className="pt-6">
-            <div className="flex items-start space-x-3">
-              <div className="flex-shrink-0">
-                <CheckCircle className="h-6 w-6 text-blue-600" />
-              </div>
-              <div className="flex-1">
-                <h3 className="text-sm font-semibold text-blue-900 mb-1">
-                  AI Provider Configured
-                </h3>
-                <p className="text-sm text-blue-800">
-                  Training will use <strong>{llmConfig.provider}</strong> ({llmConfig.model}) embeddings for your documents.
-                </p>
               </div>
             </div>
           </CardContent>
