@@ -855,6 +855,7 @@
           word-wrap: break-word;
           font-size: 14px;
           line-height: 1.4;
+          white-space: pre-wrap;
         }
 
         .chat-widget-message.user {

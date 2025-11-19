@@ -1474,7 +1474,7 @@ export default function ConversationView({
                             message.role
                           )}`}
                         >
-                          {message.text && <p className="text-sm">{message.text}</p>}
+                          {message.text && <p className="text-sm whitespace-pre-wrap">{message.text}</p>}
                           
                           {/* Display image if present */}
                           {message.meta?.image?.url && (

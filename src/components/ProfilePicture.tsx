@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Facebook, Instagram, MessageCircle, Send } from "lucide-react";
+import { Facebook, Instagram, MessageCircle, Send, User } from "lucide-react";
 
 interface ProfilePictureProps {
   src?: string | null;
@@ -35,8 +35,10 @@ export function ProfilePicture({ src, alt, platform, size = "md" }: ProfilePictu
         return MessageCircle;
       case 'telegram':
         return Send;
+      case 'widget':
+        return User;
       default:
-        return Facebook;
+        return User;
     }
   };
   
@@ -50,8 +52,10 @@ export function ProfilePicture({ src, alt, platform, size = "md" }: ProfilePictu
         return 'bg-green-600';
       case 'telegram':
         return 'bg-blue-500';
+      case 'widget':
+        return 'bg-gray-500';
       default:
-        return 'bg-blue-600';
+        return 'bg-gray-500';
     }
   };
   
