@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { socketService } from "@/lib/socket";
 import { z } from "zod";
 
 const updateCannedResponseSchema = z.object({
@@ -152,6 +153,11 @@ export async function PATCH(
       },
     });
 
+    // Emit Socket.IO event to notify all clients in the company
+    socketService.emitToCompany(session.user.companyId, "canned-response:updated", {
+      response: updated,
+    });
+
     return NextResponse.json({ response: updated });
   } catch (error) {
     console.error("Error updating canned response:", error);
@@ -220,6 +226,11 @@ export async function DELETE(
     await db.cannedResponse.update({
       where: { id },
       data: { isActive: false },
+    });
+
+    // Emit Socket.IO event to notify all clients in the company
+    socketService.emitToCompany(session.user.companyId, "canned-response:deleted", {
+      id,
     });
 
     return NextResponse.json({ success: true });

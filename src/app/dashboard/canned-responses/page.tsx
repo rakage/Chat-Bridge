@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
+import { useSocket } from "@/hooks/useSocket";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -69,6 +70,7 @@ interface CannedResponse {
 export default function CannedResponsesPage() {
   const { data: session } = useSession();
   const { toast } = useToast();
+  const { socket, isConnected } = useSocket();
   const [responses, setResponses] = useState<CannedResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -93,6 +95,83 @@ export default function CannedResponsesPage() {
   useEffect(() => {
     fetchResponses();
   }, [scopeFilter, categoryFilter, searchQuery]);
+
+  // Socket.IO real-time updates
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleCannedResponseCreated = (data: { response: CannedResponse }) => {
+      console.log("🔥 Received canned-response:created event", data);
+      
+      // Check if the new response matches current filters
+      const { response } = data;
+      
+      // Apply filters
+      let shouldAdd = true;
+      
+      if (scopeFilter === "personal" && response.scope !== "PERSONAL") {
+        shouldAdd = false;
+      }
+      if (scopeFilter === "company" && response.scope !== "COMPANY") {
+        shouldAdd = false;
+      }
+      if (categoryFilter !== "all" && response.category !== categoryFilter) {
+        shouldAdd = false;
+      }
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        const matchesSearch =
+          response.title.toLowerCase().includes(query) ||
+          response.content.toLowerCase().includes(query) ||
+          (response.shortcut && response.shortcut.toLowerCase().includes(query));
+        if (!matchesSearch) {
+          shouldAdd = false;
+        }
+      }
+
+      if (shouldAdd) {
+        setResponses((prev) => [response, ...prev]);
+        toast({
+          title: "New Response Added",
+          description: `"${response.title}" has been created`,
+        });
+      }
+    };
+
+    const handleCannedResponseUpdated = (data: { response: CannedResponse }) => {
+      console.log("🔥 Received canned-response:updated event", data);
+      
+      setResponses((prev) =>
+        prev.map((r) => (r.id === data.response.id ? data.response : r))
+      );
+      
+      toast({
+        title: "Response Updated",
+        description: `"${data.response.title}" has been updated`,
+      });
+    };
+
+    const handleCannedResponseDeleted = (data: { id: string }) => {
+      console.log("🔥 Received canned-response:deleted event", data);
+      
+      setResponses((prev) => prev.filter((r) => r.id !== data.id));
+      
+      toast({
+        title: "Response Deleted",
+        description: "The canned response has been deleted",
+      });
+    };
+
+    socket.on("canned-response:created", handleCannedResponseCreated);
+    socket.on("canned-response:updated", handleCannedResponseUpdated);
+    socket.on("canned-response:deleted", handleCannedResponseDeleted);
+
+    return () => {
+      socket.off("canned-response:created", handleCannedResponseCreated);
+      socket.off("canned-response:updated", handleCannedResponseUpdated);
+      socket.off("canned-response:deleted", handleCannedResponseDeleted);
+    };
+  }, [socket, scopeFilter, categoryFilter, searchQuery, toast]);
 
   const fetchResponses = async () => {
     try {

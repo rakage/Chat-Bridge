@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { socketService } from "@/lib/socket";
 import { z } from "zod";
 
 const createCannedResponseSchema = z.object({
@@ -145,6 +146,11 @@ export async function POST(request: NextRequest) {
           },
         },
       },
+    });
+
+    // Emit Socket.IO event to notify all clients in the company
+    socketService.emitToCompany(session.user.companyId, "canned-response:created", {
+      response,
     });
 
     return NextResponse.json({ response }, { status: 201 });

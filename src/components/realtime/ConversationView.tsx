@@ -1012,18 +1012,26 @@ export default function ConversationView({
     // Replace variables in content
     const processedContent = replaceVariables(response.content, context);
 
-    // Replace the /shortcut in the message with the processed content
-    const words = newMessage.split(" ");
-    const lastWord = words.pop() || "";
-    if (lastWord.startsWith("/")) {
-      words.push(processedContent);
-      setNewMessage(words.join(" "));
+    // Find and replace the /shortcut trigger in the message
+    const text = newMessage;
+    let newText = "";
+    
+    // Find the last occurrence of "/" in the text
+    const lastSlashIndex = text.lastIndexOf("/");
+    
+    if (lastSlashIndex !== -1) {
+      // Remove everything from the last "/" onwards and replace with the response
+      newText = text.substring(0, lastSlashIndex) + processedContent;
     } else {
-      setNewMessage(newMessage + " " + processedContent);
+      // If no "/" found (shouldn't happen), just append
+      newText = text + processedContent;
     }
+    
+    setNewMessage(newText);
 
     // Close dropdown
     setShowCannedDropdown(false);
+    setCannedSearchQuery("");
 
     // Focus back on input
     messageInputRef.current?.focus();
@@ -1046,6 +1054,12 @@ export default function ConversationView({
 
   // Handle keyboard shortcuts
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // Don't send message if canned response dropdown is open
+    if (showCannedDropdown) {
+      // Let the dropdown handle these keys
+      return;
+    }
+
     // Enter to send (without Shift)
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
